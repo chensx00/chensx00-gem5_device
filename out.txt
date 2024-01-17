@@ -1,0 +1,219 @@
+Global frequency set at 1000000000000 ticks per second
+gem5 Simulator System.  https://www.gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 23.1.0.0
+gem5 compiled Jan 17 2024 23:06:39
+gem5 started Jan 17 2024 23:12:01
+gem5 executing on CsxDesktop, pid 201372
+command line: build/RISCV/gem5.opt --debug-flags=Device,Device_Mem,Device_Cache configs/device/device-riscv.py
+
+Beginning simulation!
+   1000: system.cpu.workload: translate addr Vaddr: 0 Paddr: 0
+   1000: system.cpu.mmu.itb: going check uncache: addr Vaddr: 0 Paddr: 0
+   1000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 0 Paddr: 0
+   1000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 0 Paddr: 0
+   1000: system.cpu.fetch1.icache_port: sendTimingReq addr: 0 
+   1000: system.cpu.icache: handleTimingReqMiss 0 Read
+   3000: system.cpu.icache.mem_side_port: sendTimingReq addr: 0 
+   3000: system.membus.mem_side_port[0]: sendTimingReq addr: 0 
+  81000: system.cpu.workload: translate addr Vaddr: 40 Paddr: 40
+  81000: system.cpu.mmu.itb: going check uncache: addr Vaddr: 40 Paddr: 40
+  81000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 40 Paddr: 40
+  81000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 40 Paddr: 40
+  81000: system.cpu.fetch1.icache_port: sendTimingReq addr: 40 
+  81000: system.cpu.icache: handleTimingReqMiss 40 Read
+  83000: system.cpu.icache.mem_side_port: sendTimingReq addr: 40 
+  83000: system.membus.mem_side_port[0]: sendTimingReq addr: 40 
+  88000: system.cpu.workload: translate addr Vaddr: 390 Paddr: 390
+  88000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 390 Paddr: 390
+  88000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 390 Paddr: 390
+  88000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 390 Paddr: 390
+  89000: system.cpu.execute.dcache_port: sendTimingReq addr: 390 
+  89000: system.cpu.dcache: handleTimingReqMiss 390 Write
+  89000: system.cpu.workload: translate addr Vaddr: 3a0 Paddr: 3a0
+  89000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 3a0 Paddr: 3a0
+  89000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 3a0 Paddr: 3a0
+  89000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 3a0 Paddr: 3a0
+  90000: system.cpu.execute.dcache_port: sendTimingReq addr: 3a0 
+  90000: system.cpu.dcache: handleTimingReqMiss 3a0 Write
+  90000: system.cpu.workload: translate addr Vaddr: 3b0 Paddr: 3b0
+  90000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 3b0 Paddr: 3b0
+  90000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 3b0 Paddr: 3b0
+  90000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 3b0 Paddr: 3b0
+  91000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 380 
+  91000: system.membus.mem_side_port[0]: sendTimingReq addr: 380 
+  91000: system.cpu.workload: translate addr Vaddr: 3c0 Paddr: 3c0
+  91000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 3c0 Paddr: 3c0
+  91000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 3c0 Paddr: 3c0
+  91000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 3c0 Paddr: 3c0
+  92000: system.cpu.workload: translate addr Vaddr: 3d0 Paddr: 3d0
+  92000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 3d0 Paddr: 3d0
+  92000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 3d0 Paddr: 3d0
+  92000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 3d0 Paddr: 3d0
+  93000: system.cpu.workload: translate addr Vaddr: 3e0 Paddr: 3e0
+  93000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 3e0 Paddr: 3e0
+  93000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 3e0 Paddr: 3e0
+  93000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 3e0 Paddr: 3e0
+ 136000: system.cpu.workload: translate addr Vaddr: 80 Paddr: 80
+ 136000: system.cpu.mmu.itb: going check uncache: addr Vaddr: 80 Paddr: 80
+ 136000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 80 Paddr: 80
+ 136000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 80 Paddr: 80
+ 136000: system.cpu.fetch1.icache_port: sendTimingReq addr: 80 
+ 136000: system.cpu.icache: handleTimingReqMiss 80 Read
+ 138000: system.cpu.icache.mem_side_port: sendTimingReq addr: 80 
+ 138000: system.membus.mem_side_port[0]: sendTimingReq addr: 80 
+ 142000: system.cpu.execute.dcache_port: sendTimingReq addr: 3b0 
+ 142000: system.cpu.dcache: handleTimingReqHit 3b0 Write
+ 142000: system.cpu.workload: translate addr Vaddr: 3f0 Paddr: 3f0
+ 142000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 3f0 Paddr: 3f0
+ 142000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 3f0 Paddr: 3f0
+ 142000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 3f0 Paddr: 3f0
+ 145000: system.cpu.execute.dcache_port: sendTimingReq addr: 3c0 
+ 145000: system.cpu.dcache: handleTimingReqMiss 3c0 Write
+ 145000: system.cpu.workload: translate addr Vaddr: 400 Paddr: 400
+ 145000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 400 Paddr: 400
+ 145000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 400 Paddr: 400
+ 145000: system.cpu.mmu.pma_checker: Is uncache: addr Vaddr: 400 Paddr: 400
+ 146000: system.cpu.execute.dcache_port: sendTimingReq addr: 400 
+ 146000: system.cpu.dcache: handleTimingReqMiss 400 Write
+ 147000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 3c0 
+ 147000: system.membus.mem_side_port[0]: sendTimingReq addr: 3c0 
+ 148000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 400 
+ 148000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 400 
+ 148000: system.membus.mem_side_port[0]: sendTimingReq addr: 400 
+ 169000: system.cpu.dcache: handleUncacheableWriteResp 400 : Write
+ 172000: system.cpu.execute.dcache_port: sendTimingReq addr: 3d0 
+ 172000: system.cpu.dcache: handleTimingReqMiss 3d0 Write
+ 172000: system.cpu.workload: translate addr Vaddr: 410 Paddr: 410
+ 172000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 410 Paddr: 410
+ 172000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 410 Paddr: 410
+ 172000: system.cpu.mmu.pma_checker: Is uncache: addr Vaddr: 410 Paddr: 410
+ 199000: system.cpu.execute.dcache_port: sendTimingReq addr: 410 
+ 199000: system.cpu.dcache: handleTimingReqMiss 410 Write
+ 201000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 410 
+ 201000: system.membus.mem_side_port[0]: sendTimingReq addr: 410 
+ 203000: system.cpu.execute.dcache_port: sendTimingReq addr: 3e0 
+ 203000: system.cpu.dcache: handleTimingReqHit 3e0 Write
+ 206000: system.cpu.execute.dcache_port: sendTimingReq addr: 3f0 
+ 206000: system.cpu.dcache: handleTimingReqHit 3f0 Write
+ 222000: system.cpu.dcache: handleUncacheableWriteResp 410 : Write
+ 225000: system.cpu.workload: translate addr Vaddr: 420 Paddr: 420
+ 225000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 420 Paddr: 420
+ 225000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 420 Paddr: 420
+ 225000: system.cpu.mmu.pma_checker: Is uncache: addr Vaddr: 420 Paddr: 420
+ 225000: system.cpu.execute.dcache_port: sendTimingReq addr: 420 
+ 225000: system.cpu.dcache: handleTimingReqMiss 420 Write
+ 227000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 420 
+ 227000: system.membus.mem_side_port[0]: sendTimingReq addr: 420 
+ 248000: system.cpu.dcache: handleUncacheableWriteResp 420 : Write
+ 251000: system.cpu.workload: translate addr Vaddr: 430 Paddr: 430
+ 251000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 430 Paddr: 430
+ 251000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 430 Paddr: 430
+ 251000: system.cpu.mmu.pma_checker: Is uncache: addr Vaddr: 430 Paddr: 430
+ 251000: system.cpu.execute.dcache_port: sendTimingReq addr: 430 
+ 251000: system.cpu.dcache: handleTimingReqMiss 430 Write
+ 253000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 430 
+ 253000: system.membus.mem_side_port[0]: sendTimingReq addr: 430 
+ 274000: system.cpu.dcache: handleUncacheableWriteResp 430 : Write
+ 277000: system.cpu.workload: translate addr Vaddr: 440 Paddr: 440
+ 277000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 440 Paddr: 440
+ 277000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 440 Paddr: 440
+ 277000: system.cpu.mmu.pma_checker: Is uncache: addr Vaddr: 440 Paddr: 440
+ 277000: system.cpu.execute.dcache_port: sendTimingReq addr: 440 
+ 277000: system.cpu.dcache: handleTimingReqMiss 440 Write
+ 277000: system.cpu.workload: translate addr Vaddr: c0 Paddr: c0
+ 277000: system.cpu.mmu.itb: going check uncache: addr Vaddr: c0 Paddr: c0
+ 277000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: c0 Paddr: c0
+ 277000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: c0 Paddr: c0
+ 277000: system.cpu.fetch1.icache_port: sendTimingReq addr: c0 
+ 277000: system.cpu.icache: handleTimingReqMiss c0 Read
+ 279000: system.cpu.icache.mem_side_port: sendTimingReq addr: c0 
+ 279000: system.membus.mem_side_port[0]: sendTimingReq addr: c0 
+ 279000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 440 
+ 280000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 440 
+ 280000: system.membus.mem_side_port[0]: sendTimingReq addr: 440 
+ 301000: system.cpu.dcache: handleUncacheableWriteResp 440 : Write
+ 304000: system.cpu.workload: translate addr Vaddr: 390 Paddr: 390
+ 304000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 390 Paddr: 390
+ 304000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 390 Paddr: 390
+ 304000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 390 Paddr: 390
+ 304000: system.cpu.execute.dcache_port: sendTimingReq addr: 390 
+ 304000: system.cpu.dcache: handleTimingReqHit 390 Read
+ 307000: system.cpu.workload: translate addr Vaddr: 3a0 Paddr: 3a0
+ 307000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 3a0 Paddr: 3a0
+ 307000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 3a0 Paddr: 3a0
+ 307000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 3a0 Paddr: 3a0
+ 307000: system.cpu.execute.dcache_port: sendTimingReq addr: 3a0 
+ 307000: system.cpu.dcache: handleTimingReqHit 3a0 Read
+ 310000: system.cpu.workload: translate addr Vaddr: 3b0 Paddr: 3b0
+ 310000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 3b0 Paddr: 3b0
+ 310000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 3b0 Paddr: 3b0
+ 310000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 3b0 Paddr: 3b0
+ 310000: system.cpu.execute.dcache_port: sendTimingReq addr: 3b0 
+ 310000: system.cpu.dcache: handleTimingReqHit 3b0 Read
+ 313000: system.cpu.workload: translate addr Vaddr: 3c0 Paddr: 3c0
+ 313000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 3c0 Paddr: 3c0
+ 313000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 3c0 Paddr: 3c0
+ 313000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 3c0 Paddr: 3c0
+ 313000: system.cpu.execute.dcache_port: sendTimingReq addr: 3c0 
+ 313000: system.cpu.dcache: handleTimingReqHit 3c0 Read
+ 316000: system.cpu.workload: translate addr Vaddr: 3d0 Paddr: 3d0
+ 316000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 3d0 Paddr: 3d0
+ 316000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 3d0 Paddr: 3d0
+ 316000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 3d0 Paddr: 3d0
+ 316000: system.cpu.execute.dcache_port: sendTimingReq addr: 3d0 
+ 316000: system.cpu.dcache: handleTimingReqHit 3d0 Read
+ 319000: system.cpu.workload: translate addr Vaddr: 3e0 Paddr: 3e0
+ 319000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 3e0 Paddr: 3e0
+ 319000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 3e0 Paddr: 3e0
+ 319000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 3e0 Paddr: 3e0
+ 319000: system.cpu.execute.dcache_port: sendTimingReq addr: 3e0 
+ 319000: system.cpu.dcache: handleTimingReqHit 3e0 Read
+ 322000: system.cpu.workload: translate addr Vaddr: 3f0 Paddr: 3f0
+ 322000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 3f0 Paddr: 3f0
+ 322000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 3f0 Paddr: 3f0
+ 322000: system.cpu.mmu.pma_checker: No uncache: addr Vaddr: 3f0 Paddr: 3f0
+ 322000: system.cpu.execute.dcache_port: sendTimingReq addr: 3f0 
+ 322000: system.cpu.dcache: handleTimingReqHit 3f0 Read
+ 325000: system.cpu.workload: translate addr Vaddr: 400 Paddr: 400
+ 325000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 400 Paddr: 400
+ 325000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 400 Paddr: 400
+ 325000: system.cpu.mmu.pma_checker: Is uncache: addr Vaddr: 400 Paddr: 400
+ 325000: system.cpu.execute.dcache_port: sendTimingReq addr: 400 
+ 325000: system.cpu.dcache: handleTimingReqMiss 400 Read
+ 327000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 400 
+ 327000: system.membus.mem_side_port[0]: sendTimingReq addr: 400 
+ 351000: system.cpu.workload: translate addr Vaddr: 410 Paddr: 410
+ 351000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 410 Paddr: 410
+ 351000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 410 Paddr: 410
+ 351000: system.cpu.mmu.pma_checker: Is uncache: addr Vaddr: 410 Paddr: 410
+ 351000: system.cpu.execute.dcache_port: sendTimingReq addr: 410 
+ 351000: system.cpu.dcache: handleTimingReqMiss 410 Read
+ 353000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 410 
+ 353000: system.membus.mem_side_port[0]: sendTimingReq addr: 410 
+ 406000: system.cpu.workload: translate addr Vaddr: 420 Paddr: 420
+ 406000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 420 Paddr: 420
+ 406000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 420 Paddr: 420
+ 406000: system.cpu.mmu.pma_checker: Is uncache: addr Vaddr: 420 Paddr: 420
+ 406000: system.cpu.execute.dcache_port: sendTimingReq addr: 420 
+ 406000: system.cpu.dcache: handleTimingReqMiss 420 Read
+ 408000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 420 
+ 408000: system.membus.mem_side_port[0]: sendTimingReq addr: 420 
+ 461000: system.cpu.workload: translate addr Vaddr: 430 Paddr: 430
+ 461000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 430 Paddr: 430
+ 461000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 430 Paddr: 430
+ 461000: system.cpu.mmu.pma_checker: Is uncache: addr Vaddr: 430 Paddr: 430
+ 461000: system.cpu.execute.dcache_port: sendTimingReq addr: 430 
+ 461000: system.cpu.dcache: handleTimingReqMiss 430 Read
+ 463000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 430 
+ 463000: system.membus.mem_side_port[0]: sendTimingReq addr: 430 
+ 516000: system.cpu.workload: translate addr Vaddr: 440 Paddr: 440
+ 516000: system.cpu.mmu.dtb: going check uncache: addr Vaddr: 440 Paddr: 440
+ 516000: system.cpu.mmu.pma_checker: In check uncache: addr Vaddr: 440 Paddr: 440
+ 516000: system.cpu.mmu.pma_checker: Is uncache: addr Vaddr: 440 Paddr: 440
+ 516000: system.cpu.execute.dcache_port: sendTimingReq addr: 440 
+ 516000: system.cpu.dcache: handleTimingReqMiss 440 Read
+ 518000: system.cpu.dcache.mem_side_port: sendTimingReq addr: 440 
+ 518000: system.membus.mem_side_port[0]: sendTimingReq addr: 440 
+Exiting @ tick 543000 because exiting with last active thread context

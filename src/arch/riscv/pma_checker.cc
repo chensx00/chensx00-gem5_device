@@ -43,7 +43,7 @@
 #include "mem/request.hh"
 #include "params/PMAChecker.hh"
 #include "sim/sim_object.hh"
-
+#include "debug/Device.hh"
 namespace gem5
 {
 
@@ -56,9 +56,15 @@ uncacheable(params.uncacheable.begin(), params.uncacheable.end())
 void
 PMAChecker::check(const RequestPtr &req)
 {
+        DPRINTF(Device, "In check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
     if (isUncacheable(req->getPaddr(), req->getSize())) {
+        DPRINTF(Device, "Is uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
         req->setFlags(Request::UNCACHEABLE | Request::STRICT_ORDER);
     }
+    else {
+        DPRINTF(Device, "No uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
+    }
+    
 }
 
 bool

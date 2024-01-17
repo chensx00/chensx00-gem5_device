@@ -52,11 +52,16 @@
 #include <string>
 
 #include "base/addr_range.hh"
+#include "base/trace.hh"
 #include "mem/packet.hh"
 #include "mem/protocol/atomic.hh"
 #include "mem/protocol/functional.hh"
 #include "mem/protocol/timing.hh"
 #include "sim/port.hh"
+
+#include "sim/faults.hh"
+#include "sim/serialize.hh"
+#include "debug/Device_Mem.hh"
 
 namespace gem5
 {
@@ -602,6 +607,8 @@ RequestPort::sendMemBackdoorReq(const MemBackdoorReq &req,
 inline bool
 RequestPort::sendTimingReq(PacketPtr pkt)
 {
+    //DPRINTF(MMU, "Allocating Page: %#x-%#x\n", vaddr, vaddr + size);
+    DPRINTF(Device_Mem, "sendTimingReq addr: %" PRIx64 " \n",pkt->getAddr());
     try {
         addTrace(pkt);
         bool succ = TimingRequestProtocol::sendReq(_responsePort, pkt);

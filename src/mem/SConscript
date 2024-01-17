@@ -167,3 +167,6 @@ DebugFlag('TokenPort')
 DebugFlag("MemChecker")
 DebugFlag("MemCheckerMonitor")
 DebugFlag("QOS")
+
+DebugFlag("Device")
+DebugFlag("Device_Mem")

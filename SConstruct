@@ -187,7 +187,8 @@ main = Environment(tools=[
 
 main.Tool(SCons.Tool.FindTool(['gcc', 'clang'], main))
 main.Tool(SCons.Tool.FindTool(['g++', 'clang++'], main))
-
+if SCons.Tool.FindTool(['compilation_db'], main) is not None:
+    main.Tool('compilation_db')
 Export('main')
 
 from gem5_scons.util import get_termcap

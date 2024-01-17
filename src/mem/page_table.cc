@@ -41,6 +41,8 @@
 #include "sim/faults.hh"
 #include "sim/serialize.hh"
 
+#include "debug/Device.hh"
+
 namespace gem5
 {
 
@@ -156,6 +158,7 @@ Fault
 EmulationPageTable::translate(const RequestPtr &req)
 {
     Addr paddr;
+    
     assert(pageAlign(req->getVaddr() + req->getSize() - 1) ==
            pageAlign(req->getVaddr()));
     if (!translate(req->getVaddr(), paddr))
@@ -165,6 +168,9 @@ EmulationPageTable::translate(const RequestPtr &req)
         panic("Request spans page boundaries!\n");
         return NoFault;
     }
+
+    DPRINTF(Device, "translate addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
+
     return NoFault;
 }
 

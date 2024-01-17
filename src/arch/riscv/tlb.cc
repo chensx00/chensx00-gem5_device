@@ -53,7 +53,7 @@
 #include "sim/full_system.hh"
 #include "sim/process.hh"
 #include "sim/system.hh"
-
+#include "debug/Device.hh"
 namespace gem5
 {
 
@@ -374,6 +374,7 @@ TLB::translate(const RequestPtr &req, ThreadContext *tc,
         }
 
         if (!delayed && fault == NoFault) {
+            DPRINTF(Device, "going check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
             pma->check(req);
 
             // do pmp check if any checking condition is met.
@@ -398,6 +399,11 @@ TLB::translate(const RequestPtr &req, ThreadContext *tc,
         Process * p = tc->getProcessPtr();
 
         Fault fault = p->pTable->translate(req);
+
+        //add this function to make uncache req
+        DPRINTF(Device, "going check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
+        pma->check(req);
+
         if (fault != NoFault)
             return fault;
 
