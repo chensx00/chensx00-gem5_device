@@ -32,6 +32,25 @@ X86 ISA). More detailed documentation can be found in `simple.py`.
 import m5
 from m5.objects import *
 # from m5.objects import Cache
+
+#AddrRange(0xFFF0000000, size="8MB")
+uncacheable_range = [
+        #[AddrRange(0x1,size="512MB")],
+        [0x400,0x500]
+        #AddrRange(0x1C010000, size="1")
+        #[0xF0000000,0xF0000001],[0xF0000001,0xF0000002],[0xF0000002,0xF0000003]   
+    
+] 
+deviceaddr_range = [
+    [0x400,0x420]
+
+]
+
+mem_range = [
+    [0x0,0x20000000],
+    #[0x420,0x20000000]
+]
+
 system = System()
 
 system.clk_domain = SrcClockDomain()
@@ -39,10 +58,12 @@ system.clk_domain.clock = "1GHz"
 system.clk_domain.voltage_domain = VoltageDomain()
 
 system.mem_mode = "timing"
-system.mem_ranges = [AddrRange("512MB")]
+system.mem_ranges = mem_range#[AddrRange("512MB")]
 system.cpu = RiscvMinorCPU()
 
 system.membus = SystemXBar()
+
+system.device = SimpleDeviceObj(deviceaddr=deviceaddr_range)
 
 # get a Cache
 class L1Cache(Cache):
@@ -64,22 +85,26 @@ system.cpu.dcache = L1DCache()
 
 system.cpu.icache_port = system.cpu.icache.cpu_side
 system.cpu.dcache_port = system.cpu.dcache.cpu_side
-
-
+# print('hello \nhello \nhello\n')
+# print(system.device)
+# print('\n---------------------\n')
+# for item in dir(system.device):
+#     print(item)
+# print('\n---------------------\n')
+# print(system.device._ports)
+# print(system.device.data_side)
+# print(system.device.cxx_class)
+# print('\n---------------------\n')
+# system.device.enable_side = system.membus.mem_side_ports
+system.device.data_side = system.membus.cpu_side_ports
+#system.device.enable_side = system.membus.mem_side_ports
 system.cpu.icache.mem_side = system.membus.cpu_side_ports
 system.cpu.dcache.mem_side = system.membus.cpu_side_ports
 
 system.cpu.createInterruptController()
 
 
-#AddrRange(0xFFF0000000, size="8MB")
-uncacheable_range = [
-        #[AddrRange(0x1,size="512MB")],
-        [0x400,0x500]
-        #AddrRange(0x1C010000, size="1")
-        #[0xF0000000,0xF0000001],[0xF0000001,0xF0000002],[0xF0000002,0xF0000003]   
-    
-] 
+
 system.cpu.mmu.pma_checker = PMAChecker(uncacheable=uncacheable_range)
 
 system.mem_ctrl = MemCtrl()
@@ -95,7 +120,7 @@ thispath = os.path.dirname(os.path.realpath(__file__))
 binary = os.path.join(
     thispath,
     "../../",
-    "test_device/test2"
+    "test_device/test3"
     #"tests/test-progs/hello/bin/riscv/linux/hello",
 )
 

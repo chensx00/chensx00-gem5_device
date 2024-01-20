@@ -39,7 +39,8 @@
  */
 
 #include "mem/protocol/timing.hh"
-
+#include "base/trace.hh"
+#include "debug/Device_Obj.hh"
 namespace gem5
 {
 
@@ -79,7 +80,12 @@ TimingRequestProtocol::sendRetryResp(TimingResponseProtocol *peer)
 bool
 TimingResponseProtocol::sendResp(TimingRequestProtocol *peer, PacketPtr pkt)
 {
+     //uint8_t* data1 = pkt->getPtr<uint8_t>();
+    //DPRINTF(Device_Obj, "Got response for addr %" PRIx64 ", is %s,is %s\n", pkt->getAddr(), pkt->isRead()?"Read":"Write",pkt->isResponse()?" Response":"not Response");
     assert(pkt->isResponse());
+
+   
+
     return peer->recvTimingResp(pkt);
 }
 

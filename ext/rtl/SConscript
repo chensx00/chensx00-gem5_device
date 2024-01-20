@@ -1,0 +1,20 @@
+# Add Verilator PATH
+
+import os
+Import('env')
+
+## Add VERILATOR PATH
+env.Append(CPPPATH=[Dir(os.environ['VERILATOR_ROOT'] + '/include')])
+env.Append(CPPPATH=[Dir(os.environ['VERILATOR_ROOT'] + '/include/vltstd')])
+## FIFO 
+## We need to use `srcnode` to specify a src path instead of using build path.
+## Gem5 takes out-of-tree building so that src path and build path are different
+env.Append(CPPPATH=[Dir('.').srcnode()])
+env.Append(CPPPATH=[Dir('simpledev_wrapper/verilator_simpledev_vcd').srcnode()])
+## Find the library path and add library
+env.Append(LIBS=['VerilatorSimDev'])
+env.Prepend(LIBPATH=Dir('.').srcnode())
+## Add dynamic link library path
+env.Append(LINKFLAGS=['-Wl,-rpath,' + str(Dir('.').srcnode())])
+
+env.Append(CPPDEFINES=['VM_SC=0', 'VM_TRACE=1','VL_THREADED=0'])

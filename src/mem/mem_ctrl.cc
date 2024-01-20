@@ -50,7 +50,7 @@
 #include "mem/mem_interface.hh"
 #include "mem/nvm_interface.hh"
 #include "sim/system.hh"
-
+#include "debug/Device_Obj.hh"
 namespace gem5
 {
 
@@ -102,6 +102,7 @@ MemCtrl::init()
    if (!port.isConnected()) {
         fatal("MemCtrl %s is unconnected!\n", name());
     } else {
+        DPRINTF(Device_Obj,"mem_ctrl:SendsendRangeChange\n");
         port.sendRangeChange();
     }
 }
