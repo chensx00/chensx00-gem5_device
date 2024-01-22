@@ -8,28 +8,23 @@
 #include "sim/ticked_object.hh"
 #include "wrapper_simdev.hh"
 
-#define N 5
+#define addressNum 5
 
 namespace gem5
 {
-
-// static uint16_t requestorID = 0;
-class SimpleDeviceObj : public TickedObject
-{
-    public:
     /*0x400 : enable signal: 0xbb is true
       0x404 : inA
       0x408 : inB
       0x40c : out
       0x410 : over signal: 0xaa is true
     */
-        
-        static constexpr Addr AddrList[N] = {0x400,0x404,0x408,0x40c,0x410};
+class SimpleDeviceObj : public TickedObject
+{
+    public:
+        static constexpr Addr AddrList[addressNum] = {0x400,0x404,0x408,0x40c,0x410};
+
     private:
-
-
-        // in order to get enable signal from CPU, 
-        // don't need to response
+    //deprecated, since the same address cannot belong to two different ReadesponsePort
         class EnablePort : public ResponsePort
         {
             private:
@@ -40,9 +35,9 @@ class SimpleDeviceObj : public TickedObject
                 EnablePort(const std::string& name, SimpleDeviceObj *owner ) :
                     ResponsePort(name), owner(owner), ptk(nullptr)
                 { }
-            
-                AddrRangeList getAddrRanges() const override;
 
+                AddrRangeList getAddrRanges() const override;
+            
             protected:
 
                 Tick recvAtomic(PacketPtr pkt) override
@@ -51,10 +46,12 @@ class SimpleDeviceObj : public TickedObject
                     { panic("recvFunctional unimpl."); }
                 void recvRespRetry() override
                     { panic("recvFunctional unimpl."); }
+                bool recvTimingReq(PacketPtr pkt) override
+                    { panic("recvFunctional unimpl."); }
 
-                bool recvTimingReq(PacketPtr pkt) override;
-                
+
         };
+
 
         class DataPort : public RequestPort
         {
@@ -68,63 +65,68 @@ class SimpleDeviceObj : public TickedObject
                 {  }
 
                 void sendPacket(PacketPtr pkt);
-
-
-
+            
             protected:
-
                 bool recvTimingResp(PacketPtr pkt) override;
                 void recvReqRetry() override;
                 void recvRangeChange() override;
 
-        };
+        };     
 
         EnablePort enablePort;
-
         DataPort dataPort;
-        
+
         bool blocked;
-        bool isBlocking;
 
-
-        void evaluate() override;
-
+        void sendRangeChange();
         
+        void evaluate() override;
 
         void endRTLModel();
 
-        bool handleEnable(PacketPtr pkt);
-        
         bool handleResponse(PacketPtr pkt);
 
-        void sendRangeChange();
-            //{ /*nothing*/ }
         bool handleData(Addr addr, uint8_t data);
+
+        void MakePacketAndTrytoSend(int index, MemCmd cmd);                
+
         bool WrSetData();
 
-        bool WrGetData();
-        void MakePacketAndTrytoSend(int index, MemCmd cmd);
+        bool WrGetData(); 
+
+        bool WrReset();
+
         inputSimDev inp;
+
         outputSimDev out;
         
-
-        
-        bool ReadyA;
-        bool ReadyB;
-        bool ReadyE;
-        bool ReadyO;
-        bool Waiting;
-        bool Requiring;
         uint8_t ptrData;
-        uint16_t requestorID = 0; 
+
+        uint16_t requestorID;
+
         int RequestCnt;
-        
+
+        enum DeviceStatus {
+            IDEL,   //waiting enable signal
+            GetA,   //requiring dataA
+            GetB,   //requiring dataB
+            RTLRun,
+            SetOut, //output result
+            ReSet,  //reset RTLmodel and reset enable signal
+            SetOK,  //set complete signal
+            Waiting //Waiting for changing to next status
+
+        };
+
+        DeviceStatus Status;
+        DeviceStatus LastStatus;
 
     public:
 
         SimpleDeviceObj(const SimpleDeviceObjParams &params);
 
         void startup() override;
+        
         void init() override;
 
         Port &getPort(const std::string &if_name, PortID idx=InvalidPortID) override;
@@ -133,7 +135,6 @@ class SimpleDeviceObj : public TickedObject
 
         AddrRangeList deviceaddr;
 
-        
 
 
 };
@@ -143,6 +144,5 @@ class SimpleDeviceObj : public TickedObject
 
 
 } //namespace gem5
-
 
 #endif

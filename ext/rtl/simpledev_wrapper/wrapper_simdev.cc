@@ -49,7 +49,7 @@ Wrapper_SimDev::setData(inputSimDev in)
     top->ena = in.ena;
     top->inA = in.inA;
     top->inB = in.inB;
-    printf("set data:ena=%" PRIx64 " inA=%" PRIx64 " inB=%" PRIx64 " \n",in.ena,in.inA,in.inB);
+    //printf("set data:ena=%" PRIx64 " inA=%" PRIx64 " inB=%" PRIx64 " \n",in.ena,in.inA,in.inB);
 }
 
 void

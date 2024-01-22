@@ -1,5 +1,3 @@
-
-
 #include "device/simple_deviceobj.hh"
 #include "base/trace.hh"
 #include "debug/Device_Obj.hh"
@@ -13,41 +11,34 @@ SimpleDeviceObj::SimpleDeviceObj(const SimpleDeviceObjParams &params) :
     TickedObject(params),
     enablePort(params.name + ".enable_side", this),
     dataPort(params.name + ".data_side", this),
-    //needRetry(false),
     blocked(false),
-    isBlocking(false),
-    ReadyA(false),
-    ReadyB(false),
-    ReadyE(false),
-    ReadyO(false),
-    Waiting(false),
-    Requiring(true),
     ptrData(0),
     requestorID(0),
     RequestCnt(4000),
+    Status(IDEL),
+    LastStatus(IDEL),
+    wr(nullptr),
     deviceaddr(params.deviceaddr.begin(),params.deviceaddr.end())
 {
-
     wr = new Wrapper_SimDev(true,"dev.vcd");
-
-
     registerExitCallback([this]() {
         delete this->wr;
         this->wr = nullptr;
     });
 }
 
-void
+
+
+void 
 SimpleDeviceObj::startup() {start(); }
 
-
+//deprecated
 void
 SimpleDeviceObj::init() 
 {
     DPRINTF(Device_Obj,"SimpleDeviceObj:enablePort.sendRangeChange\n");
     enablePort.sendRangeChange();
 }
-
 
 Port &
 SimpleDeviceObj::getPort(const std::string &if_name, PortID idx)
@@ -66,65 +57,52 @@ SimpleDeviceObj::getPort(const std::string &if_name, PortID idx)
     }
 }
 
+void
+SimpleDeviceObj::sendRangeChange()
+{
+    enablePort.sendRangeChange();
+}
+
+//deprecated
 AddrRangeList
 SimpleDeviceObj::EnablePort::getAddrRanges() const
 {
-    for(AddrRange range : owner->deviceaddr)
-    {
-        DPRINTF(Device_Obj, "EnablePort::getAddrRanges:start=%" PRIx64 " ,end=%" PRIx64 "\n",range.start(),range.end());
-    }
-
     return owner->deviceaddr;
 
 }
+//deprecated
+// bool
+// SimpleDeviceObj::EnablePort::recvTimingReq(PacketPtr pkt)
+// {
+//         if (!owner->handleEnable(pkt)) {
+//         needRetry = true;
+//         return false;
+//     } else {
+//         return true;
+//     }
+// }
 
-bool
-SimpleDeviceObj::EnablePort::recvTimingReq(PacketPtr pkt)
-{
-    //bool isEnable = 
-    //owner->handleEnable(pkt);
-    //DPRINTF(Device_Obj, "this is %s enable signal, addr: %" PRIx64 "\n", isEnable?"a":"NOT a" ,pkt->getAddr());
-    //return true;
-        if (!owner->handleEnable(pkt)) {
-        needRetry = true;
-        return false;
-    } else {
-        return true;
-    }
-}
+// bool 
+// SimpleDeviceObj::handleEnable(PacketPtr pkt)
+// {
+//     if(blocked){
+//         return false;
+//     }
+//     Addr addr = pkt->getAddr();
+//     DPRINTF(Device_Obj, "this is %s enable signal, addr: %" PRIx64 ", data: %d\n", addr == AddrList[0]?"a":"NOT a" ,pkt->getAddr(),pkt->getPtr<uint8_t>());
+//     if(addr == AddrList[0])
+//     {
+//         if(pkt->isWrite())
+//         {
+//             ReadyE = true;
 
-
-void
-SimpleDeviceObj::DataPort::sendPacket(PacketPtr pkt)
-{
-    panic_if(blockedPacket != nullptr, "Should never try to send if blocked!");
-    
-    if(!sendTimingReq(pkt)) {
-        blockedPacket = pkt;
+//             return true;
+//         }
         
-    } else {
-        if(pkt->getAddr() == AddrList[3]){
-            owner->ReadyO = true;
-        }
-    }
-}
-
-bool
-SimpleDeviceObj::DataPort::recvTimingResp(PacketPtr pkt)
-{
-    return owner->handleResponse(pkt);
-}
-
-void 
-SimpleDeviceObj::DataPort::recvReqRetry()
-{
-    assert(blockedPacket != nullptr);
-    PacketPtr pkt = blockedPacket;
-    blockedPacket = nullptr;
-    
-    sendPacket(pkt);
-    delete pkt;
-}
+//     }
+//     blocked = true;
+//     return true;
+// }
 
 void
 SimpleDeviceObj::DataPort::recvRangeChange()
@@ -134,126 +112,232 @@ SimpleDeviceObj::DataPort::recvRangeChange()
     owner->sendRangeChange();
 }
 
-void
-SimpleDeviceObj::sendRangeChange()
-{
-    enablePort.sendRangeChange();
-}
-
-bool 
-SimpleDeviceObj::handleEnable(PacketPtr pkt)
-{
-    if(blocked){
-        return false;
-    }
-    Addr addr = pkt->getAddr();
-    DPRINTF(Device_Obj, "this is %s enable signal, addr: %" PRIx64 ", data: %d\n", addr == AddrList[0]?"a":"NOT a" ,pkt->getAddr(),pkt->getPtr<uint8_t>());
-    if(addr == AddrList[0])
-    {
-        if(pkt->isWrite())
-        {
-            ReadyE = true;
-
-            return true;
-        }
-        
-    }
-    blocked = true;
-    return true;
-}
-
-
-
-bool
-SimpleDeviceObj::handleResponse(PacketPtr pkt)
-{
-    //assert(blocked);
-    isBlocking = false;
-    
-    
-    DPRINTF(Device_Obj, "Got response for addr %" PRIx64 ", is %s\n", pkt->getAddr(), pkt->isRead()?"Read":"Write");
-    blocked = false;
-
-    if(pkt->isWrite())
-    {
-
-     ;   
-    } else {
-        DPRINTF(Device_Obj,"get Ptr ");
-        Addr addr = pkt->getAddr();
-        //unsigned size = pkt->getSize();
-        uint8_t* data = pkt->getPtr<uint8_t>();
-        //DPRINTF(Device_Obj, "handleResponse : Size is %d\n",size);
-        DPRINTF(Device_Obj, "This ReadResponse pkt: addr= %" PRIx64 " ,data= %d\n", addr, *data);
-        if(!handleData(addr, *data))
-        { DPRINTF(Device_Obj, "handleData Unsuccess\n"); }
-    }
-
-    return true;
-}
-
-bool
-SimpleDeviceObj::handleData(Addr addr, uint8_t data)
-{
-    
-    switch (addr) {
-        case SimpleDeviceObj::AddrList[0]:{
-            inp.inA = data;
-            if(data == 0xbb)
-            {
-                DPRINTF(Device_Obj, "Get inE = %d\n ",data);
-                ReadyE = true;
-            } else {
-                Requiring = true;      
-            }
-            
-            
-            break;
-        }
-
-        case SimpleDeviceObj::AddrList[1]:{
-            inp.inA = data;
-            ReadyA = true;
-            DPRINTF(Device_Obj, "Get inA = %d\n ",data);
-            break;
-        }
-
-        case SimpleDeviceObj::AddrList[2]:{
-            inp.inB = data;
-            ReadyB = true;
-            DPRINTF(Device_Obj, "Get inB = %d\n ",data);
-            break;
-        }
-        default:
-        {
-            panic("handleData default!");
-        }
-    
-    }
-    return true;
-}
 
 void
 SimpleDeviceObj::MakePacketAndTrytoSend(int index, MemCmd cmd)
 {
     unsigned size = 8;
-    //Flags flags = new Flags<unsigned int>();
-    //MemCmd cmd = new MemCmd(MemCmd::Command::ReadReq)
     RequestPtr newReq = 
         std::make_shared<gem5::Request>(SimpleDeviceObj::AddrList[index], \
                                         size, 0x00002000|0x00001000,\
                                         requestorID++);
     PacketPtr newPtk = new gem5::Packet(newReq, cmd);
     newPtk->dataDynamic(&ptrData);
-    // bool isO = false;
-    // if(index == 3){
-    //     isO = true;
-    // }
     DPRINTF(Device_Obj,"MakePtr,addr= %" PRIx64 ", data= %d, cmd= %s\n",SimpleDeviceObj::AddrList[index], ptrData, cmd==MemCmd::Command::ReadReq?"Read":"Write");
     dataPort.sendPacket(newPtk);
     
 }
 
+void
+SimpleDeviceObj::DataPort::sendPacket(PacketPtr pkt)
+{
+    panic_if(blockedPacket != nullptr, "Should never try to send if blocked!");
+    
+    if(!sendTimingReq(pkt)) {
+        blockedPacket = pkt;   
+    }
+}
+
+
+void 
+SimpleDeviceObj::DataPort::recvReqRetry()
+{
+    assert(blockedPacket != nullptr);
+    PacketPtr pkt = blockedPacket;
+    blockedPacket = nullptr;
+    sendPacket(pkt);
+    delete pkt;
+}
+
+bool
+SimpleDeviceObj::DataPort::recvTimingResp(PacketPtr pkt)
+{
+    return owner->handleResponse(pkt);
+}
+
+bool
+SimpleDeviceObj::handleResponse(PacketPtr pkt)
+{
+    //assert(blocked);
+    Addr addr = pkt->getAddr();
+    DPRINTF(Device_Obj, "Got response for addr %" PRIx64 ", is %s\n", pkt->getAddr(), pkt->isRead()?"Read":"Write");
+    blocked = false;
+    if(pkt->isWrite())
+    {
+        switch(addr)
+        {
+            case SimpleDeviceObj::AddrList[0]:{
+                if(LastStatus == ReSet){
+                    DPRINTF(Device_Obj, "ReSet over\n");
+                    Status = SetOK;
+                }
+                break;
+            }
+            case SimpleDeviceObj::AddrList[3]:{
+                if(LastStatus == SetOut){
+                    DPRINTF(Device_Obj, "SetOut over\n");
+                    Status = ReSet;
+                }
+                break;
+            }
+            case SimpleDeviceObj::AddrList[4]:{
+                if(LastStatus == SetOK){
+                    DPRINTF(Device_Obj, "SetOK over\n");
+                    Status = IDEL;
+                }
+                break;
+            }
+            default:{
+                ;
+            }
+        }
+    } else {
+        DPRINTF(Device_Obj,"get Ptr ");
+        uint8_t* data = pkt->getPtr<uint8_t>();
+        DPRINTF(Device_Obj, "This ReadResponse pkt: addr= %" PRIx64 " ,data= %d\n", addr, *data);
+        switch (addr)
+        {
+            case SimpleDeviceObj::AddrList[0]:{
+                if(LastStatus == IDEL){
+                    if(*data == 0xbb){
+                        DPRINTF(Device_Obj, "IDEL over\n",*data);
+                        Status = GetA;
+                    }
+                }
+                break;
+            }
+            case SimpleDeviceObj::AddrList[1]:{
+                if(LastStatus == GetA){
+                    DPRINTF(Device_Obj, "GetA over\n",*data);
+                    inp.inA = *data;
+                    Status = GetB;
+                }
+                break;
+            } 
+            case SimpleDeviceObj::AddrList[2]:{
+                if(LastStatus == GetB){
+                    DPRINTF(Device_Obj, "GetB over\n",*data);
+                    inp.inB = *data;
+                    Status = RTLRun;
+                }
+                break;
+            }
+            default:{
+                DPRINTF(Device_Obj,"handleData default!\n");
+            }
+        }
+    }
+    return true;
+}
+
+
+
+void
+SimpleDeviceObj::evaluate()
+{
+    wr->tick();
+    if(RequestCnt != 0){
+        RequestCnt --;
+    } else {
+        RequestCnt = 4000;
+        DPRINTF(Device_Obj,"evaluate!\n");
+
+        switch (Status) {
+            
+            case IDEL:{
+                LastStatus = IDEL;
+                DPRINTF(Device_Obj,"IDEL\n");
+                MemCmd cmd = MemCmd(MemCmd::Command::ReadReq);
+                MakePacketAndTrytoSend(0,cmd);
+                Status = Waiting;
+                break;
+            }
+
+            case GetA:{
+                LastStatus = GetA;
+                DPRINTF(Device_Obj,"GetA\n");
+                MemCmd cmd = MemCmd(MemCmd::Command::ReadReq);
+                MakePacketAndTrytoSend(1,cmd);
+                Status = Waiting;
+                break;
+            }
+
+            case GetB:{
+                LastStatus = GetB;
+                DPRINTF(Device_Obj,"GetB\n");
+                MemCmd cmd = MemCmd(MemCmd::Command::ReadReq);
+                MakePacketAndTrytoSend(2,cmd);
+                Status = Waiting;
+                break;
+            }
+
+            case RTLRun:{
+                LastStatus = RTLRun;
+                DPRINTF(Device_Obj, "RTLRun\n");
+                WrSetData();
+                Status = Waiting;
+                break;
+            }
+
+            case SetOut:{
+                LastStatus = SetOut;
+                DPRINTF(Device_Obj,"SetOut\n");
+                MemCmd cmd = MemCmd(MemCmd::Command::WriteReq);
+                out = wr->getData();
+                ptrData = (uint8_t)out.out;
+                MakePacketAndTrytoSend(3,cmd);
+                Status = Waiting;
+                break;
+            }
+
+            case SetOK:{
+                LastStatus = SetOK;
+                DPRINTF(Device_Obj,"SetOK\n");
+                MemCmd cmd = MemCmd(MemCmd::Command::WriteReq);
+                ptrData = 0xaa;
+                MakePacketAndTrytoSend(4,cmd);
+                Status = Waiting;
+                break;
+            }
+
+            case ReSet:{
+                LastStatus = ReSet;
+                DPRINTF(Device_Obj,"ReSet\n");
+                WrReset();
+                MemCmd cmd = MemCmd(MemCmd::Command::WriteReq);
+                ptrData = 0x00;
+                MakePacketAndTrytoSend(0,cmd);
+                Status = Waiting;
+                break;
+            }
+
+            case Waiting:{
+                switch (LastStatus){
+                    case RTLRun:{
+                        if(wr->isOK()){
+
+                            Status = SetOut;
+                            break;
+                        } else {
+                            Status = Waiting;
+                            break;
+                        }
+                    }
+                    default:{
+                        Status = Waiting;
+                    }
+                }
+                break;
+            }
+
+            default:{
+                DPRINTF(Device_Obj,"evaluate default!\n");
+            }
+        }
+
+
+    }
+}
 
 bool 
 SimpleDeviceObj::WrSetData()
@@ -270,80 +354,11 @@ SimpleDeviceObj::WrGetData()
     return true;
 }
 
-void 
-SimpleDeviceObj::evaluate() 
+bool
+SimpleDeviceObj::WrReset()
 {
-    wr->tick();
-    inp.ena = 0;
-    if(RequestCnt!=0){
-            RequestCnt--;
-        } else {
-            RequestCnt = 4000;
-            DPRINTF(Device_Obj,"evaluate!\n");
-                if(Requiring && !Waiting && !isBlocking)
-                {
-                    // if(RequestCnt!=0){
-                    //     RequestCnt--;
-                    // } else {
-                    //     RequestCnt = 4000;
-                    Requiring = false;
-                    DPRINTF(Device_Obj,"Requiring\n");
-                    MemCmd cmd = MemCmd(MemCmd::Command::ReadReq);
-                    isBlocking = true;
-                    DPRINTF(Device_Obj,"Req E\n");
-                    MakePacketAndTrytoSend(0,cmd);
-                    
-
-                }
-                if(ReadyE && !Waiting && !isBlocking)
-                {
-                    MemCmd cmd = MemCmd(MemCmd::Command::ReadReq);
-                    isBlocking = true;
-                    if(!ReadyA){
-                        DPRINTF(Device_Obj,"Req A\n");
-                        MakePacketAndTrytoSend(1,cmd);
-                    } else if(ReadyA && !ReadyB){
-                        DPRINTF(Device_Obj,"Req B\n");
-                        MakePacketAndTrytoSend(2,cmd);
-                    }
-                }
-        }
-    if(ReadyE && ReadyA && ReadyB)
-    {
-        DPRINTF(Device_Obj, "E,A,B is ready\n ");
-        ReadyE = ReadyA = ReadyB = false;
-        Waiting = true;
-        WrSetData();
-
-
-        DPRINTF(Device_Obj,"Make Enable Signal unable\n");
-        MemCmd cmd = MemCmd(MemCmd::Command::WriteReq);
-        ptrData = 0x00;
-        MakePacketAndTrytoSend(0,cmd);
-    }
-    if(Waiting == true && wr->isOK())
-    {
-        
-        
-        MemCmd cmd = MemCmd(MemCmd::Command::WriteReq);
-        out = wr->getData();
-        DPRINTF(Device_Obj,"Wr->OK out.out=%" PRIx64 "\n",out.out);
-        ptrData = (uint8_t)out.out;
-        MakePacketAndTrytoSend(3,cmd);
-    }
-    if(ReadyO)
-    {
-        DPRINTF(Device_Obj,"ReadyO\n");
-        ReadyO = false;
-        MemCmd cmd = MemCmd(MemCmd::Command::WriteReq);
-        ptrData = 0xaa;
-        MakePacketAndTrytoSend(4,cmd);
-        //Requiring = true;
-        Waiting = false;
-    }
-
-
-
+    wr->reset();
+    return true;
 }
 
 void 
@@ -352,15 +367,6 @@ SimpleDeviceObj::endRTLModel()
     delete wr;
     wr = nullptr;
 }
-
-
-
-
-
-
-
-
-
 
 
 } //namespace gem5
