@@ -29,6 +29,13 @@ m5out
 /system/arm/bootloader/arm64/boot.arm64
 /system/arm/bootloader/arm64/boot_emm.arm64
 /system/arm/bootloader/arm64/boot_v2.arm64
+ext/rtl/simpledev_wrapper/libVerilatorSimDev.so
+ext/rtl/simpledev_wrapper/verilator_simpledev_vcd
+ext/rtl/libVerilatorSimDev.so
+ext/rtl/packet_simdev.hh
+ext/rtl/wrapper_simdev.hh
+test_device/*.o
+
 configs/example/memcheck.cfg
 configs/dram/lowp_sweep.cfg
 .pyenv
