@@ -2,6 +2,7 @@
 #include "base/trace.hh"
 #include "debug/Device_Obj.hh"
 #include "base/flags.hh"
+#include "debug/Device_Obj_begin.hh"
 
 
 namespace gem5
@@ -18,7 +19,8 @@ SimpleDeviceObj::SimpleDeviceObj(const SimpleDeviceObjParams &params) :
     Status(IDEL),
     LastStatus(IDEL),
     wr(nullptr),
-    deviceaddr(params.deviceaddr.begin(),params.deviceaddr.end())
+    deviceaddr(params.deviceaddr.begin(),params.deviceaddr.end()),
+    AddrList(params.addr_list)
 {
     wr = new Wrapper_SimDev(true,"dev.vcd");
     registerExitCallback([this]() {
@@ -163,69 +165,112 @@ SimpleDeviceObj::handleResponse(PacketPtr pkt)
     DPRINTF(Device_Obj, "Got response for addr %" PRIx64 ", is %s\n", pkt->getAddr(), pkt->isRead()?"Read":"Write");
     blocked = false;
     if(pkt->isWrite())
-    {
-        switch(addr)
-        {
-            case SimpleDeviceObj::AddrList[0]:{
-                if(LastStatus == ReSet){
-                    DPRINTF(Device_Obj, "ReSet over\n");
-                    Status = SetOK;
-                }
-                break;
+    {   
+        if(addr == SimpleDeviceObj::AddrList[0]){
+            if(LastStatus == ReSet){
+                DPRINTF(Device_Obj, "ReSet over\n");
+                Status = SetOK;
             }
-            case SimpleDeviceObj::AddrList[3]:{
-                if(LastStatus == SetOut){
-                    DPRINTF(Device_Obj, "SetOut over\n");
-                    Status = ReSet;
-                }
-                break;
+        } else if(addr == SimpleDeviceObj::AddrList[3]){
+            if(LastStatus == SetOut){
+                DPRINTF(Device_Obj, "SetOut over\n");
+                Status = ReSet;
             }
-            case SimpleDeviceObj::AddrList[4]:{
-                if(LastStatus == SetOK){
-                    DPRINTF(Device_Obj, "SetOK over\n");
-                    Status = IDEL;
-                }
-                break;
+        } else if(addr == SimpleDeviceObj::AddrList[4]){
+            if(LastStatus == SetOK){
+                DPRINTF(Device_Obj, "SetOK over\n");
+                Status = IDEL;
             }
-            default:{
-                ;
-            }
+        } else {
+            ;
         }
+        // switch(addr)
+        // {
+        //     case SimpleDeviceObj::AddrList[0]:{
+        //         if(LastStatus == ReSet){
+        //             DPRINTF(Device_Obj, "ReSet over\n");
+        //             Status = SetOK;
+        //         }
+        //         break;
+        //     }
+            // case SimpleDeviceObj::AddrList[3]:{
+            //     if(LastStatus == SetOut){
+            //         DPRINTF(Device_Obj, "SetOut over\n");
+            //         Status = ReSet;
+            //     }
+            //     break;
+            // }
+            // case SimpleDeviceObj::AddrList[4]:{
+            //     if(LastStatus == SetOK){
+            //         DPRINTF(Device_Obj, "SetOK over\n");
+            //         Status = IDEL;
+            //     }
+            //     break;
+            // }
+            // default:{
+            //     ;
+            // }
+        // }
     } else {
         DPRINTF(Device_Obj,"get Ptr ");
         uint8_t* data = pkt->getPtr<uint8_t>();
         DPRINTF(Device_Obj, "This ReadResponse pkt: addr= %" PRIx64 " ,data= %d\n", addr, *data);
-        switch (addr)
-        {
-            case SimpleDeviceObj::AddrList[0]:{
-                if(LastStatus == IDEL){
-                    if(*data == 0xbb){
-                        DPRINTF(Device_Obj, "IDEL over\n",*data);
-                        Status = GetA;
-                    }
+        if(addr == SimpleDeviceObj::AddrList[0]){
+            if(LastStatus == IDEL){
+                if(*data == 0xbb){
+                    DPRINTF(Device_Obj, "IDEL over\n");
+                    Status = GetA;
+                } else {
+                    DPRINTF(Device_Obj, "IDEL again\n");
+                    Status = IDEL;
                 }
-                break;
             }
-            case SimpleDeviceObj::AddrList[1]:{
-                if(LastStatus == GetA){
-                    DPRINTF(Device_Obj, "GetA over\n",*data);
-                    inp.inA = *data;
-                    Status = GetB;
-                }
-                break;
-            } 
-            case SimpleDeviceObj::AddrList[2]:{
-                if(LastStatus == GetB){
-                    DPRINTF(Device_Obj, "GetB over\n",*data);
-                    inp.inB = *data;
-                    Status = RTLRun;
-                }
-                break;
+        } else if(addr == SimpleDeviceObj::AddrList[1]){
+            if(LastStatus == GetA){
+                DPRINTF(Device_Obj, "GetA over\n",*data);
+                inp.inA = *data;
+                Status = GetB;
             }
-            default:{
-                DPRINTF(Device_Obj,"handleData default!\n");
+        } else if(SimpleDeviceObj::AddrList[2]){
+            if(LastStatus == GetB){
+                DPRINTF(Device_Obj, "GetB over\n",*data);
+                inp.inB = *data;
+                Status = RTLRun;
             }
+        } else {
+            ;
         }
+        // switch (addr)
+        // {
+        //     case SimpleDeviceObj::AddrList[0]:{
+        //         if(LastStatus == IDEL){
+        //             if(*data == 0xbb){
+        //                 DPRINTF(Device_Obj, "IDEL over\n",*data);
+        //                 Status = GetA;
+        //             }
+        //         }
+        //         break;
+        //     }
+            // case SimpleDeviceObj::AddrList[1]:{
+            //     if(LastStatus == GetA){
+            //         DPRINTF(Device_Obj, "GetA over\n",*data);
+            //         inp.inA = *data;
+            //         Status = GetB;
+            //     }
+            //     break;
+            // } 
+            // case SimpleDeviceObj::AddrList[2]:{
+            //     if(LastStatus == GetB){
+            //         DPRINTF(Device_Obj, "GetB over\n",*data);
+            //         inp.inB = *data;
+            //         Status = RTLRun;
+            //     }
+            //     break;
+            // }
+        //     default:{
+        //         DPRINTF(Device_Obj,"handleData default!\n");
+        //     }
+        // }
     }
     return true;
 }
@@ -255,6 +300,7 @@ SimpleDeviceObj::evaluate()
 
             case GetA:{
                 LastStatus = GetA;
+                DPRINTF(Device_Obj_begin,"GetA\n");
                 DPRINTF(Device_Obj,"GetA\n");
                 MemCmd cmd = MemCmd(MemCmd::Command::ReadReq);
                 MakePacketAndTrytoSend(1,cmd);
@@ -313,6 +359,12 @@ SimpleDeviceObj::evaluate()
 
             case Waiting:{
                 switch (LastStatus){
+                    case IDEL:{
+                        //MemCmd cmd = MemCmd(MemCmd::Command::ReadReq);
+                        //MakePacketAndTrytoSend(0,cmd);
+                        break;
+                    }
+
                     case RTLRun:{
                         if(wr->isOK()){
 

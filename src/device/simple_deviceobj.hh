@@ -21,7 +21,7 @@ namespace gem5
 class SimpleDeviceObj : public TickedObject
 {
     public:
-        static constexpr Addr AddrList[addressNum] = {0x400,0x404,0x408,0x40c,0x410};
+        //static constexpr Addr AddrList[addressNum] = {0x400,0x404,0x408,0x40c,0x410};
 
     private:
     //deprecated, since the same address cannot belong to two different ReadesponsePort
@@ -135,7 +135,9 @@ class SimpleDeviceObj : public TickedObject
 
         AddrRangeList deviceaddr;
 
+        std::vector<Addr> AddrList;
 
+        //static constexpr Addr AddrList[addressNum] = {0x400,0x404,0x408,0x40c,0x410};
 
 };
 

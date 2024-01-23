@@ -12,3 +12,5 @@ class SimpleDeviceObj(TickedObject):
     data_side = RequestPort("MemBus side port,1.get device's input,2.set device's result")
 
     deviceaddr = VectorParam.AddrRange([], "Uncacheable address ranges")
+
+    addr_list = VectorParam.UInt64("Device addr")

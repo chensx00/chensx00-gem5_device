@@ -170,3 +170,4 @@ DebugFlag("QOS")
 
 DebugFlag("Device")
 DebugFlag("Device_Mem")
+DebugFlag("Device_Tran")

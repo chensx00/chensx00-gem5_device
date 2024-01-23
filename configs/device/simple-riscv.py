@@ -36,7 +36,7 @@ from m5.objects import *
 #AddrRange(0xFFF0000000, size="8MB")
 uncacheable_range = [
         #[AddrRange(0x1,size="512MB")],
-        [0x7e400,0x7e500]
+        #[0x0,0x0]
         #AddrRange(0x1C010000, size="1")
         #[0xF0000000,0xF0000001],[0xF0000001,0xF0000002],[0xF0000002,0xF0000003]   
 ] 
@@ -52,11 +52,6 @@ mem_range = [
     #[0x420,0x20000000]
 ]
 
-addrlist = [
-    #0x400,0x404,0x408,0x40c,0x410
-    0x7e400,0x7e404,0x7e408,0x7e40c,0x7e410
-]
-
 system = System()
 
 system.clk_domain = SrcClockDomain()
@@ -69,7 +64,7 @@ system.cpu = RiscvMinorCPU()
 
 system.membus = SystemXBar()
 
-system.device = SimpleDeviceObj(deviceaddr=deviceaddr_range, addr_list=addrlist )
+#system.device = SimpleDeviceObj(deviceaddr=deviceaddr_range)
 
 # get a Cache
 class L1Cache(Cache):
@@ -92,7 +87,7 @@ system.cpu.dcache = L1DCache()
 system.cpu.icache_port = system.cpu.icache.cpu_side
 system.cpu.dcache_port = system.cpu.dcache.cpu_side
 
-system.device.data_side = system.membus.cpu_side_ports
+#system.device.data_side = system.membus.cpu_side_ports
 
 system.cpu.icache.mem_side = system.membus.cpu_side_ports
 system.cpu.dcache.mem_side = system.membus.cpu_side_ports
@@ -116,7 +111,6 @@ thispath = os.path.dirname(os.path.realpath(__file__))
 binary = os.path.join(
     thispath,
     "../../",
-    #"test_device/test3"
     "test_device/test4"
     #"tests/test-progs/hello/bin/riscv/linux/hello",
 )

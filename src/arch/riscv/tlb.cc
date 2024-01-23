@@ -54,6 +54,7 @@
 #include "sim/process.hh"
 #include "sim/system.hh"
 #include "debug/Device.hh"
+#include "debug/Device_Tran.hh"
 namespace gem5
 {
 
@@ -397,15 +398,21 @@ TLB::translate(const RequestPtr &req, ThreadContext *tc,
             return std::make_shared<GenericPageTableFault>(req->getVaddr());
 
         Process * p = tc->getProcessPtr();
-
+        DPRINTF(Device_Tran,"in 0tran1\n");
         Fault fault = p->pTable->translate(req);
-
+        DPRINTF(Device_Tran,"in 0tran2\n");
         //add this function to make uncache req
-        DPRINTF(Device, "going check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
-        pma->check(req);
+        // DPRINTF(Device, "going check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
+        // pma->check(req);
 
         if (fault != NoFault)
             return fault;
+        
+        if (fault == NoFault){
+            DPRINTF(Device, "going check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
+            pma->check(req);
+        }
+        
 
         return NoFault;
     }
