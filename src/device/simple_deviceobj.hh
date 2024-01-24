@@ -10,6 +10,7 @@
 
 #define addressNum 5
 
+
 namespace gem5
 {
     /*0x400 : enable signal: 0xbb is true
@@ -25,31 +26,37 @@ class SimpleDeviceObj : public TickedObject
 
     private:
     //deprecated, since the same address cannot belong to two different ReadesponsePort
-        class EnablePort : public ResponsePort
-        {
+
+        class DevicePort : public ResponsePort{
             private:
                 SimpleDeviceObj *owner;
-                PacketPtr ptk;
-                bool needRetry;
+                PacketPtr blockedPacket;
+
             public:
-                EnablePort(const std::string& name, SimpleDeviceObj *owner ) :
-                    ResponsePort(name), owner(owner), ptk(nullptr)
+                DevicePort(const std::string& _name, SimpleDeviceObj *_owner) :
+                    ResponsePort(_name),owner(_owner),blockedPacket(nullptr)
                 { }
 
+                void sendPacket(PacketPtr pkt);
+
                 AddrRangeList getAddrRanges() const override;
-            
+
+                void trySendRetry();
+
             protected:
+                Tick recvAtomic(PacketPtr pkt) override {
+                    panic("recvAtomic unimpl.\n");  
+                }
 
-                Tick recvAtomic(PacketPtr pkt) override
-                    { panic("recvAtomic unimpl."); }
-                void recvFunctional(PacketPtr pkt) override
-                    { panic("recvFunctional unimpl."); }
-                void recvRespRetry() override
-                    { panic("recvFunctional unimpl."); }
-                bool recvTimingReq(PacketPtr pkt) override
-                    { panic("recvFunctional unimpl."); }
+                void recvFunctional(PacketPtr pkt) override {
+                    panic("recvFunctional unimpl.\n");  
+                }
 
+                bool recvTimingReq(PacketPtr pkt) override ;
 
+                void recvRespRetry() override ;
+
+                
         };
 
 
@@ -73,8 +80,10 @@ class SimpleDeviceObj : public TickedObject
 
         };     
 
-        EnablePort enablePort;
+
         DataPort dataPort;
+
+        DevicePort devicePort;
 
         bool blocked;
 
@@ -88,7 +97,13 @@ class SimpleDeviceObj : public TickedObject
 
         bool handleData(Addr addr, uint8_t data);
 
-        void MakePacketAndTrytoSend(int index, MemCmd cmd);                
+        bool handleRequest(PacketPtr pkt);
+
+        void MakePacketAndTrytoSend(int index, MemCmd cmd);
+
+        void sendResponse(PacketPtr pkt);
+
+        void ResetDeviceReg();                
 
         bool WrSetData();
 
@@ -108,18 +123,21 @@ class SimpleDeviceObj : public TickedObject
 
         enum DeviceStatus {
             IDEL,   //waiting enable signal
-            GetA,   //requiring dataA
-            GetB,   //requiring dataB
+                GetA,   //requiring dataA
+                GetB,   //requiring dataB
             RTLRun,
-            SetOut, //output result
-            ReSet,  //reset RTLmodel and reset enable signal
+            Waiting,   //waiting for RTL 
+                SetOut, //output result
+                ReSet,  //reset RTLmodel and reset enable signal
             SetOK,  //set complete signal
-            Waiting //Waiting for changing to next status
+            //Waiting //Waiting for changing to next status
 
         };
 
         DeviceStatus Status;
         DeviceStatus LastStatus;
+
+        uint8_t deviceReg[addressNum];
 
     public:
 

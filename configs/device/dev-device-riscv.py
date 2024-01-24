@@ -48,9 +48,11 @@ deviceaddr_range = [
 ]
 
 mem_range = [
-    [0x0,0x80000000],
+    [0x0,0x40000000],[0x60000000,0x80000000]
     #[0x420,0x20000000]
 ]
+
+
 
 system = System()
 
@@ -111,8 +113,8 @@ thispath = os.path.dirname(os.path.realpath(__file__))
 binary = os.path.join(
     thispath,
     "../../",
-    "test_device/test4"
-    #"tests/test-progs/hello/bin/riscv/linux/hello",
+    #"test_device/test4"
+    "tests/test-progs/hello/bin/riscv/linux/hello",
 )
 
 system.workload = SEWorkload.init_compatible(binary)
