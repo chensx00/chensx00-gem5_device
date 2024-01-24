@@ -31,33 +31,6 @@ X86 ISA). More detailed documentation can be found in `simple.py`.
 
 import m5
 from m5.objects import *
-# from m5.objects import Cache
-
-#AddrRange(0xFFF0000000, size="8MB")
-uncacheable_range = [
-        #[AddrRange(0x1,size="512MB")],
-        [0x7e400,0x7e500]
-        #AddrRange(0x1C010000, size="1")
-        #[0xF0000000,0xF0000001],[0xF0000001,0xF0000002],[0xF0000002,0xF0000003]   
-] 
-
-# deprecated
-deviceaddr_range = [
-    [0x17e000,0x17e100]
-
-]
-
-mem_range = [
-    #[0x0,0x20000000],
-    [0x0,0x17e000],
-    #[0x420,0x20000000]
-    [0x17e100,0x2000000]
-]
-
-addrlist = [
-    #0x400,0x404,0x408,0x40c,0x410
-    0x7e400,0x7e404,0x7e408,0x7e40c,0x7e410
-]
 
 system = System()
 
@@ -66,68 +39,28 @@ system.clk_domain.clock = "1GHz"
 system.clk_domain.voltage_domain = VoltageDomain()
 
 system.mem_mode = "timing"
-system.mem_ranges = mem_range#[AddrRange("512MB")]
+system.mem_ranges = [AddrRange("512MB")]
 system.cpu = RiscvMinorCPU()
 
 system.membus = SystemXBar()
 
-system.device = SimpleDeviceObj(deviceaddr=deviceaddr_range, addr_list=addrlist )
-
-# get a Cache
-class L1Cache(Cache):
-    assoc = 2
-    tag_latency = 2
-    data_latency = 2
-    response_latency = 2
-    mshrs = 4
-    tgts_per_mshr = 20
-
-class L1ICache(L1Cache):
-    size = '16kB'
-
-class L1DCache(L1Cache):
-    size = '64kB'
-
-system.cpu.icache = L1ICache()
-system.cpu.dcache = L1DCache()
-
-system.cpu.icache_port = system.cpu.icache.cpu_side
-system.cpu.dcache_port = system.cpu.dcache.cpu_side
-
-#system.device.data_side = system.membus.cpu_side_ports
-system.device.device_side = system.membus.mem_side_ports
-
-
-system.cpu.icache.mem_side = system.membus.cpu_side_ports
-system.cpu.dcache.mem_side = system.membus.cpu_side_ports
+system.cpu.icache_port = system.membus.cpu_side_ports
+system.cpu.dcache_port = system.membus.cpu_side_ports
 
 system.cpu.createInterruptController()
 
+system.mem_ctrl = MemCtrl()
+system.mem_ctrl.dram = DDR3_1600_8x8()
+system.mem_ctrl.dram.range = system.mem_ranges[0]
+system.mem_ctrl.port = system.membus.mem_side_ports
 
-
-system.cpu.mmu.pma_checker = PMAChecker(uncacheable=uncacheable_range)
-
-system.mem_ctrl1 = MemCtrl()
-system.mem_ctrl1.dram = DDR3_1600_8x8()
-system.mem_ctrl1.dram.range = system.mem_ranges[0]
-system.mem_ctrl1.port = system.membus.mem_side_ports
-#'''
-system.mem_ctrl2 = MemCtrl()
-system.mem_ctrl2.dram = DDR3_1600_8x8()
-system.mem_ctrl2.dram.range = system.mem_ranges[1]
-system.mem_ctrl2.port = system.membus.mem_side_ports
-#'''
 system.system_port = system.membus.cpu_side_ports
-
-
 
 thispath = os.path.dirname(os.path.realpath(__file__))
 binary = os.path.join(
     thispath,
     "../../",
-    #"test_device/test3"
-    "test_device/test4"
-    #"tests/test-progs/hello/bin/riscv/linux/hello",
+    "tests/test-progs/hello/bin/riscv/linux/hello",
 )
 
 system.workload = SEWorkload.init_compatible(binary)

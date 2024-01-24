@@ -55,6 +55,7 @@
 #include "sim/system.hh"
 #include "debug/Device.hh"
 #include "debug/Device_Tran.hh"
+#include "debug/Device_CPU.hh"
 namespace gem5
 {
 
@@ -412,7 +413,7 @@ TLB::translate(const RequestPtr &req, ThreadContext *tc,
             DPRINTF(Device, "going check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
             pma->check(req);
         }
-        
+        DPRINTF(Device_CPU,"translate : addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
 
         return NoFault;
     }
