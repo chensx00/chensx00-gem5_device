@@ -379,16 +379,16 @@ BaseXBar::recvRangeChange(PortID mem_side_port_id)
 
     // remember that we got a range from this memory-side port and thus the
     // connected CPU-side-port module
-    DPRINTF(Device_Obj,"BaseXBar:recvRangeChange,mem_side_port_id=%d\n",mem_side_port_id);
+    //DPRINTF(Device_Obj,"BaseXBar:recvRangeChange,mem_side_port_id=%d\n",mem_side_port_id);
 
     gotAddrRanges[mem_side_port_id] = true;
 
     for(int i = 0;i<gotAddrRanges.size();i++)
     {
-        DPRINTF(Device_Obj,"gotAddrRanges[%d]=%s\n",i,gotAddrRanges[i]?"True":"False");
+        //DPRINTF(Device_Obj,"gotAddrRanges[%d]=%s\n",i,gotAddrRanges[i]?"True":"False");
     }
 
-    DPRINTF(Device_Obj,"recvRangeChange:gotAllAddrRanges=%s\n",gotAllAddrRanges?"True":"False");
+    //DPRINTF(Device_Obj,"recvRangeChange:gotAllAddrRanges=%s\n",gotAllAddrRanges?"True":"False");
     // update the global flag
     if (!gotAllAddrRanges) {
         // take a logical AND of all the ports and see if we got
@@ -397,7 +397,7 @@ BaseXBar::recvRangeChange(PortID mem_side_port_id)
         std::vector<bool>::const_iterator r = gotAddrRanges.begin();
         while (gotAllAddrRanges &&  r != gotAddrRanges.end()) {
             /*Device_CSX*/            
-            DPRINTF(Device_Obj,"getRanges r=%s\n",*r?"True":"False");
+            //DPRINTF(Device_Obj,"getRanges r=%s\n",*r?"True":"False");
 
             
             gotAllAddrRanges &= *r++;

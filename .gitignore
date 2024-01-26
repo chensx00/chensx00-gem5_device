@@ -42,4 +42,4 @@ configs/dram/lowp_sweep.cfg
 .vscode
 typings
 dev.vcd
-
+out.txt

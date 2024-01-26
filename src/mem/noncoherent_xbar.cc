@@ -49,7 +49,7 @@
 #include "base/trace.hh"
 #include "debug/NoncoherentXBar.hh"
 #include "debug/XBar.hh"
-
+#include "debug/Device_Obj.hh"
 namespace gem5
 {
 
@@ -164,6 +164,8 @@ NoncoherentXBar::recvTimingReq(PacketPtr pkt, PortID cpu_side_port_id)
     if (expect_response) {
         assert(routeTo.find(pkt->req) == routeTo.end());
         routeTo[pkt->req] = cpu_side_port_id;
+        //DPRINTF(Device_Obj,"need response and add to routeTo. pkt->addr=%#x\
+        , is %s, cpu_side_port_id = %d\n",pkt->getAddr(),pkt->isRead()?"Read":"Write",cpu_side_port_id);
     }
 
     reqLayers[mem_side_port_id]->succeededTiming(packetFinishTime);
