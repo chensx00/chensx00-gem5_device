@@ -43,15 +43,15 @@ uncacheable_range = [
 
 # deprecated
 deviceaddr_range = [
-    [0x17e000,0x17e100]
+    [0x100000,0x700000]
 
 ]
 
 mem_range = [
     #[0x0,0x20000000],
-    [0x0,0x17e000],
+    [0x0,0x10000],
     #[0x420,0x20000000]
-    [0x17e100,0x2000000]
+    [0x10000,0x20000]
 ]
 
 addrlist = [
@@ -109,12 +109,33 @@ system.cpu.mmu.pma_checker = PMAChecker(uncacheable=uncacheable_range)
 
 system.mem_ctrl1 = MemCtrl()
 system.mem_ctrl1.dram = DDR3_1600_8x8()
-system.mem_ctrl1.dram.range = system.mem_ranges[0]
+system.mem_ctrl1.dram.range = m5.objects.AddrRange(
+0x0,
+size = 0x80000,
+intlvHighBit = 6,
+xorHighBit = 0,
+intlvBits = 1,
+intlvMatch = 0
+)
+print("\n\n\n--------\n",system.mem_ctrl1.dram.range.size())
+#system.mem_ctrl1.dram.range = system.mem_ranges[0]
+# system.mem_ctrl1.intlv_bits = 1
+# system.mem_ctrl1.intlv_size = 64
 system.mem_ctrl1.port = system.membus.mem_side_ports
 #'''
 system.mem_ctrl2 = MemCtrl()
 system.mem_ctrl2.dram = DDR3_1600_8x8()
-system.mem_ctrl2.dram.range = system.mem_ranges[1]
+system.mem_ctrl2.dram.range = m5.objects.AddrRange(
+0x0,
+size = 0x80000,
+intlvHighBit = 6,
+xorHighBit = 0,
+intlvBits = 1,
+intlvMatch = 1
+)
+#system.mem_ctrl2.dram.range = system.mem_ranges[0]
+# system.mem_ctrl2.intlv_bits = 1
+# system.mem_ctrl2.intlv_size = 64
 system.mem_ctrl2.port = system.membus.mem_side_ports
 #'''
 system.system_port = system.membus.cpu_side_ports
@@ -126,7 +147,7 @@ binary = os.path.join(
     thispath,
     "../../",
     #"test_device/test3"
-    "test_device/test4"
+    "test_device/test5"
     #"tests/test-progs/hello/bin/riscv/linux/hello",
 )
 
