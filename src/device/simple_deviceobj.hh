@@ -101,7 +101,7 @@ class SimpleDeviceObj : public TickedObject
 
         void MakePacketAndTrytoSend(int index, MemCmd cmd);
 
-        void sendResponse(PacketPtr pkt);
+        void sendResponse();
 
         void ResetDeviceReg();                
 
@@ -138,6 +138,10 @@ class SimpleDeviceObj : public TickedObject
         DeviceStatus LastStatus;
 
         uint8_t deviceReg[addressNum];
+
+        EventFunctionWrapper event;
+
+        PacketPtr readyToRespPkt;
 
     public:
 
