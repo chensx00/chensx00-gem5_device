@@ -410,14 +410,14 @@ TLB::translate(const RequestPtr &req, ThreadContext *tc,
         if (fault != NoFault)
             return fault;
 
-        if(fault == NoFault){
-            Addr Vaddr = req->getVaddr();
+        // if(fault == NoFault){
+        //     Addr Vaddr = req->getVaddr();
             
-            if((Vaddr>>6) == (deviceMask>>6)) {
-                DPRINTF(Device_Obj,"deviceMask : Vaddr = %#x\n",Vaddr);
-                req->setPaddr(Vaddr);
-            }
-        }
+        //     if((Vaddr>>6) == (deviceMask>>6)) {
+        //         DPRINTF(Device_Obj,"deviceMask : Vaddr = %#x\n",Vaddr);
+        //         req->setPaddr(Vaddr);
+        //     }
+        // }
         
         if (fault == NoFault){
             DPRINTF(Device, "going check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());

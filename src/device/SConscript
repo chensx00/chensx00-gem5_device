@@ -1,8 +1,13 @@
 Import('*')
 
-SimObject('SimpleDeviceObj.py', sim_objects=['SimpleDeviceObj'])
+SimObject('SimpleDeviceObj.py', sim_objects=['SimpleDeviceObj','SimpleDriver'])
+
+#SimObject('SimpleDriver.py', sim_objects=['SimpleDriver'])
 
 Source('simple_deviceobj.cc')
+Source('simple_driver.cc')
 
 DebugFlag('Device_Obj', "Print out Device_Obj debug messages")
 DebugFlag('Device_Obj_begin')
+
+DebugFlag('Device_Driver')

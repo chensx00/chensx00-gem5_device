@@ -210,6 +210,10 @@ SimpleDeviceObj::handleRequest(PacketPtr pkt)
 
 
         } else {
+            // pkt->makeResponse();
+            // pkt -> setData(&deviceReg[3]);
+
+            // DPRINTF(Device_Obj,"SendOut, Out = %d\n",deviceReg[3]);
             DPRINTF(Device_Obj,"handleRequest : else read\n");
         }
 

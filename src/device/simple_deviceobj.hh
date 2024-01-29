@@ -155,8 +155,10 @@ class SimpleDeviceObj : public TickedObject
 
         Wrapper_SimDev *wr;
 
+        //Device's address space
         AddrRangeList deviceaddr;
 
+        //specify the device register address
         std::vector<Addr> AddrList;
 
         //static constexpr Addr AddrList[addressNum] = {0x400,0x404,0x408,0x40c,0x410};
