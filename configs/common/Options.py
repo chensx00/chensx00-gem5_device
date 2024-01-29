@@ -241,6 +241,9 @@ def addNoISAOptions(parser):
     )
 
 
+
+
+
 # Add common options that assume a non-NULL ISA.
 
 
@@ -768,6 +771,43 @@ def addSEOptions(parser):
     )
 
 
+        # Simple Device
+    parser.add_argument(
+        "--device",
+        default=False,
+        action="store_true",
+        help="The flag of whether the device is connected or not",
+    )
+
+    parser.add_argument(
+        "--device-base-addr",
+        type=str,
+        default="0x800000",
+        action="store",
+        help="The base address of the device",
+    )
+
+    parser.add_argument(
+        "--device-voltage",
+        action="store",
+        type=str,
+        default="1.0V",
+        help="The voltage of the device",
+    )
+
+    parser.add_argument(
+        "--device-clock",
+        action="store",
+        type=str,
+        default="100MHz",
+        help="The clock of the device",
+    )
+
+
+
+
+
+
 def addFSOptions(parser):
     from common.FSConfig import os_types
 
@@ -898,3 +938,4 @@ def addFSOptions(parser):
         action="store_true",
         help="Wait for remote GDB to connect.",
     )
+

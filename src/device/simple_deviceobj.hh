@@ -44,12 +44,10 @@ class SimpleDeviceObj : public TickedObject
                 void trySendRetry();
 
             protected:
-                Tick recvAtomic(PacketPtr pkt) override {
-                    panic("recvAtomic unimpl.\n");  
-                }
+                Tick recvAtomic(PacketPtr pkt) override;
 
                 void recvFunctional(PacketPtr pkt) override {
-                    panic("recvFunctional unimpl.\n");  
+                    //panic("recvFunctional unimpl.\n");  
                 }
 
                 bool recvTimingReq(PacketPtr pkt) override ;

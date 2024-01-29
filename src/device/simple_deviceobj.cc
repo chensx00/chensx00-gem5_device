@@ -22,8 +22,8 @@ SimpleDeviceObj::SimpleDeviceObj(const SimpleDeviceObjParams &params) :
     event([this]{sendResponse();},name()),
     readyToRespPkt(nullptr),
     wr(nullptr),
-    deviceaddr(params.deviceaddr.begin(),params.deviceaddr.end()),
-    AddrList(params.addr_list)
+    deviceaddr(params.device_addr.begin(),params.device_addr.end())
+    //AddrList(params.addr_list)
     
     
     
@@ -31,6 +31,20 @@ SimpleDeviceObj::SimpleDeviceObj(const SimpleDeviceObjParams &params) :
 
 
     ResetDeviceReg();
+
+    Addr addr = deviceaddr.front().start();
+    DPRINTF(Device_Obj,"this_addr = %#x\n",addr);
+    for(int i=0; i<6; i++){
+        AddrList.push_back(addr);
+        addr = addr + 4;
+
+    }
+        for(int i=0; i<6; i++){
+        DPRINTF(Device_Obj,"AddrList[%d] = %#x\n",i,AddrList[i]);
+    }
+    
+
+
 
     wr = new Wrapper_SimDev(true,"dev.vcd");
     registerExitCallback([this]() {
@@ -87,6 +101,22 @@ SimpleDeviceObj::sendRangeChange()
     devicePort.sendRangeChange();
 }
 
+Tick 
+SimpleDeviceObj::DevicePort::recvAtomic(PacketPtr pkt)
+{
+    //Cycles *delay = new Cycles();
+    const bool expect_response = pkt->needsResponse() && !pkt->cacheResponding();
+    DPRINTF(Device_Obj,\
+        "recvAtomic : Got request for addr %" PRIx64 ", is %s , is %s\n", \
+        pkt->getAddr(), pkt->isRead()?"Read":"Write",\
+        expect_response?"need_response":"dont need_response");
+
+    pkt->makeResponse();
+
+    return 0;
+} 
+
+
 AddrRangeList 
 SimpleDeviceObj::DevicePort::getAddrRanges() const
 {
@@ -108,6 +138,8 @@ SimpleDeviceObj::handleRequest(PacketPtr pkt)
         "recvTimingReq : Got request for addr %" PRIx64 ", is %s , is %s\n", \
         pkt->getAddr(), pkt->isRead()?"Read":"Write",\
         expect_response?"need_response":"dont need_response");
+
+    
 
     Addr reqAddr = pkt->getAddr();
     

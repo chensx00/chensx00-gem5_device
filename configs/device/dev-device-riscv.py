@@ -82,18 +82,22 @@ system.mem_ranges = mem_range#[AddrRange("512MB")]
 system.cpu = RiscvMinorCPU()
 system.membus = SystemXBar()
 system.device = SimpleDeviceObj(
-    deviceaddr=deviceaddr_range, 
-    addr_list=addrlist,
+    device_addr=deviceaddr_range, 
+    # addr_list=addrlist,
     clk_domain=system.device_clk_domain
-
 )
+# system.device = SimpleDeviceObj(
+#     device_addr=deviceaddr_range,
+#     device_base_addr=0x800400, 
+#     device_size=0x1000,
+#     #clk_domain=system.device_clk_domain
+# )
 system.driver = SimpleDriver(
     filename="simdev",
     deviceBaseAddr=device_base_addr
 )
 system.cpu.mmu.pma_checker = PMAChecker(uncacheable=uncacheable_range)
-# get a Cache
-
+#system.cpu.mmu.pma_checker = PMAChecker(uncacheable=uncacheable_range)
 
 system.cpu.icache = L1ICache()
 system.cpu.dcache = L1DCache()

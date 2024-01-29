@@ -11,9 +11,9 @@ class SimpleDeviceObj(TickedObject):
     #enable_side  = ResponsePort("MemBus side port, get device enable signal")
     data_side = RequestPort("MemBus side port,1.get device's input,2.set device's result")
     device_side = ResponsePort("MemBus side port, device port")
-    deviceaddr = VectorParam.AddrRange([], "Uncacheable address ranges")
+    device_addr = VectorParam.AddrRange([], "Uncacheable address ranges")
 
-    addr_list = VectorParam.UInt64("Device addr")
+    #addr_list = VectorParam.UInt64("Device addr")
 
 class SimpleDriver(EmulatedDriver):
     type = "SimpleDriver"
