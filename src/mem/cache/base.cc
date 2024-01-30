@@ -62,7 +62,7 @@
 #include "params/BaseCache.hh"
 #include "params/WriteAllocator.hh"
 #include "sim/cur_tick.hh"
-#include "debug/Device_Cache.hh"
+
 
 namespace gem5
 {

@@ -40,7 +40,7 @@
 
 #include "mem/protocol/timing.hh"
 #include "base/trace.hh"
-#include "debug/Device_Obj.hh"
+
 namespace gem5
 {
 

@@ -53,7 +53,7 @@
 #include "debug/AddrRanges.hh"
 #include "debug/Drain.hh"
 #include "debug/XBar.hh"
-#include "debug/Device_Obj.hh"
+
 
 namespace gem5
 {
