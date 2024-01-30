@@ -291,7 +291,7 @@ else:
     MemConfig.config_mem(args, system)
     config_filesystem(system, args)
 
-#simple device
+
     
 
 
@@ -300,7 +300,7 @@ else:
 
 system.workload = SEWorkload.init_compatible(mp0_path)
 
-
+#simple device
 if args.device:
     device_base_addr = args.device_base_addr;
     device_voltage = args.device_voltage;
@@ -319,7 +319,6 @@ if args.device:
     
     system.device = SimpleDeviceObj(
         device_addr=device_base_range,
-        #addr_list=device_reg_addr,
         clk_domain=device_clk_domain
     )
 

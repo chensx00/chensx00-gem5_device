@@ -10,19 +10,16 @@ namespace gem5
 
 SimpleDeviceObj::SimpleDeviceObj(const SimpleDeviceObjParams &params) :
     TickedObject(params),
-    //enablePort(params.name + ".enable_side", this),
-    dataPort(params.name + ".data_side", this),
     devicePort(params.name + ".device_side", this),
     blocked(false),
     ptrData(0),
     requestorID(0),
-    RequestCnt(100),
-    Status(IDEL),
-    LastStatus(IDEL),
+    requestCnt(100),
+    status(IDEL),
     event([this]{sendResponse();},name()),
     readyToRespPkt(nullptr),
     wr(nullptr),
-    deviceaddr(params.device_addr.begin(),params.device_addr.end())
+    deviceAddr(params.device_addr.begin(),params.device_addr.end())
     //AddrList(params.addr_list)
     
     
@@ -32,8 +29,10 @@ SimpleDeviceObj::SimpleDeviceObj(const SimpleDeviceObjParams &params) :
 
     ResetDeviceReg();
 
-    Addr addr = deviceaddr.front().start();
+    Addr addr = deviceAddr.front().start();
     DPRINTF(Device_Obj,"this_addr = %#x\n",addr);
+
+    //init AddrList 
     for(int i=0; i<6; i++){
         AddrList.push_back(addr);
         addr = addr + 4;
@@ -44,8 +43,6 @@ SimpleDeviceObj::SimpleDeviceObj(const SimpleDeviceObjParams &params) :
     }
     
 
-
-
     wr = new Wrapper_SimDev(true,"dev.vcd");
     registerExitCallback([this]() {
         delete this->wr;
@@ -54,17 +51,14 @@ SimpleDeviceObj::SimpleDeviceObj(const SimpleDeviceObjParams &params) :
 }
 
 
-
 void 
 SimpleDeviceObj::startup() {start(); }
 
-//deprecated
 void
 SimpleDeviceObj::init() 
 {
     DPRINTF(Device_Obj,"SimpleDeviceObj:enablePort.sendRangeChange\n");
     devicePort.sendRangeChange();
-    //enablePort.sendRangeChange();
 }
 
 void
@@ -79,16 +73,7 @@ Port &
 SimpleDeviceObj::getPort(const std::string &if_name, PortID idx)
 {
     panic_if(idx != InvalidPortID, "This object dosen't support vector ports");
-    //printf("\n\nif_name=");
-    //std::cout<<if_name<<std::endl<<std::endl<<std::endl;
-    if(if_name == "data_side"){
-
-        return dataPort;
-    } /*else if(if_name == "enable_side"){
-
-        return enablePort;
-    } */
-    else if(if_name == "device_side"){
+    if(if_name == "device_side"){
         return devicePort;
     } else {
         return SimObject::getPort(if_name, idx);
@@ -101,26 +86,10 @@ SimpleDeviceObj::sendRangeChange()
     devicePort.sendRangeChange();
 }
 
-Tick 
-SimpleDeviceObj::DevicePort::recvAtomic(PacketPtr pkt)
-{
-    //Cycles *delay = new Cycles();
-    const bool expect_response = pkt->needsResponse() && !pkt->cacheResponding();
-    DPRINTF(Device_Obj,\
-        "recvAtomic : Got request for addr %" PRIx64 ", is %s , is %s\n", \
-        pkt->getAddr(), pkt->isRead()?"Read":"Write",\
-        expect_response?"need_response":"dont need_response");
-
-    pkt->makeResponse();
-
-    return 0;
-} 
-
-
 AddrRangeList 
 SimpleDeviceObj::DevicePort::getAddrRanges() const
 {
-    return owner -> deviceaddr;
+    return owner -> deviceAddr;
 }
 
 bool
@@ -146,18 +115,15 @@ SimpleDeviceObj::handleRequest(PacketPtr pkt)
 
     if(pkt->isWrite()) {
         uint8_t* data = pkt->getPtr<uint8_t>();
-
-        if(reqAddr == SimpleDeviceObj::AddrList[0]){ // enable
+        if(reqAddr == SimpleDeviceObj::AddrList[0]){ // if enable = true
             deviceReg[0] = *data & (0x00 | 0xff);
             DPRINTF(Device_Obj,"SetE, E = %d\n",deviceReg[0]);
 
-            if(Status == IDEL){
+            if(status == IDEL){
                 if(deviceReg[0] == 0xbb){
-                    deviceReg[4] = 0; // reset ok signal
+                    deviceReg[4] = 0; // reset OK signal
                     DPRINTF(Device_Obj,"IDEL over\n");
-                    Status = RTLRun;
-                    
-                    //sendResponse(pkt);
+                    status = RTLRun;
                 }
             }
             pkt->makeResponse();
@@ -165,34 +131,27 @@ SimpleDeviceObj::handleRequest(PacketPtr pkt)
 
         } else if(reqAddr == SimpleDeviceObj::AddrList[1]){ // inA
             deviceReg[1] = *data & (0x00 | 0xff);
-            pkt->makeResponse();
-            
+            pkt->makeResponse(); 
             DPRINTF(Device_Obj,"SetA, A = %d\n",deviceReg[1]);
-            //sendResponse(pkt);
 
 
         } else if(reqAddr == SimpleDeviceObj::AddrList[2]){ // inB
             deviceReg[2] = *data & (0x00 | 0xff);
             pkt->makeResponse();
-            
             DPRINTF(Device_Obj,"SetB, B = %d\n",deviceReg[2]);
-            //sendResponse(pkt);
 
 
         } else if(reqAddr == SimpleDeviceObj::AddrList[3]){ // Out
             deviceReg[3] = *data & (0x00 | 0xff);
             pkt->makeResponse();
-            
-            DPRINTF(Device_Obj,"SetOut, Out = %d\n",deviceReg[3]);   
-            //sendResponse(pkt);         
+            DPRINTF(Device_Obj,"SetOut, Out = %d\n",deviceReg[3]);            
 
 
         } else if(reqAddr == SimpleDeviceObj::AddrList[4]){ // over
             deviceReg[4] = *data & (0x00 | 0xff);
-            pkt->makeResponse();
-            
+            pkt->makeResponse();           
             DPRINTF(Device_Obj,"SetOK, OK = %d\n",deviceReg[4]); 
-            //sendResponse(pkt); 
+
 
 
         } else {
@@ -202,50 +161,40 @@ SimpleDeviceObj::handleRequest(PacketPtr pkt)
 
     } else if(pkt->isRead()) {
         if(reqAddr == SimpleDeviceObj::AddrList[0]){
-            pkt -> makeResponse(); 
-            
+            pkt -> makeResponse();         
             pkt -> setData(&deviceReg[0]);
-
             DPRINTF(Device_Obj,"SendE, E = %d\n",deviceReg[0]);
-            //sendResponse(pkt); 
+
 
         } else if(reqAddr == SimpleDeviceObj::AddrList[1]){
             pkt->makeResponse();
             pkt -> setData(&deviceReg[1]);
-
             DPRINTF(Device_Obj,"SendA, A = %d\n",deviceReg[1]);
-            //sendResponse(pkt);             
+      
 
 
         } else if(reqAddr == SimpleDeviceObj::AddrList[2]){
             pkt->makeResponse();
             pkt -> setData(&deviceReg[2]);
-
             DPRINTF(Device_Obj,"SendB, B = %d\n",deviceReg[2]);
-            //sendResponse(pkt);             
+           
 
 
         } else if(reqAddr == SimpleDeviceObj::AddrList[3]){
             pkt->makeResponse();
             pkt -> setData(&deviceReg[3]);
-
             DPRINTF(Device_Obj,"SendOut, Out = %d\n",deviceReg[3]);
-            //sendResponse(pkt);             
+        
 
 
         } else if(reqAddr == SimpleDeviceObj::AddrList[4]){
             pkt->makeResponse();
             pkt -> setData(&deviceReg[4]);
-
             DPRINTF(Device_Obj,"SendOK, OK = %d\n",deviceReg[4]);
-            //sendResponse(pkt);             
+           
 
 
         } else {
-            // pkt->makeResponse();
-            // pkt -> setData(&deviceReg[3]);
-
-            // DPRINTF(Device_Obj,"SendOut, Out = %d\n",deviceReg[3]);
             DPRINTF(Device_Obj,"handleRequest : else read\n");
         }
 
@@ -267,15 +216,6 @@ SimpleDeviceObj::handleRequest(PacketPtr pkt)
 
 
 
-//static constexpr Addr AddrList[addressNum] = {0x400,0x404,0x408,0x40c,0x410};
-void
-SimpleDeviceObj::DataPort::recvRangeChange()
-{
-
-    DPRINTF(Device_Obj, "SimpleDeviceObj::DataPort::recvRangeChange\n");
-    owner->sendRangeChange();
-}
-
 void 
 SimpleDeviceObj::sendResponse()
 {
@@ -284,30 +224,8 @@ SimpleDeviceObj::sendResponse()
     devicePort.sendPacket(readyToRespPkt);
 }
 
-void
-SimpleDeviceObj::MakePacketAndTrytoSend(int index, MemCmd cmd)
-{
-    unsigned size = 8;
-    RequestPtr newReq = 
-        std::make_shared<gem5::Request>(SimpleDeviceObj::AddrList[index], \
-                                        size, 0x00002000|0x00001000,\
-                                        requestorID++);
-    PacketPtr newPtk = new gem5::Packet(newReq, cmd);
-    newPtk->dataDynamic(&ptrData);
-    DPRINTF(Device_Obj,"MakePtr,addr= %" PRIx64 ", data= %d, cmd= %s\n",SimpleDeviceObj::AddrList[index], ptrData, cmd==MemCmd::Command::ReadReq?"Read":"Write");
-    dataPort.sendPacket(newPtk);
-    
-}
 
-void
-SimpleDeviceObj::DataPort::sendPacket(PacketPtr pkt)
-{
-    panic_if(blockedPacket != nullptr, "Should never try to send if blocked!");
-    
-    if(!sendTimingReq(pkt)) {
-        blockedPacket = pkt;   
-    }
-}
+
 
 void 
 SimpleDeviceObj::DevicePort::sendPacket(PacketPtr pkt)
@@ -349,93 +267,19 @@ SimpleDeviceObj::DevicePort:: recvRespRetry()
 }
 
 
-void 
-SimpleDeviceObj::DataPort::recvReqRetry()
-{
-    assert(blockedPacket != nullptr);
-    PacketPtr pkt = blockedPacket;
-    blockedPacket = nullptr;
-    sendPacket(pkt);
-    delete pkt;
-}
 
-bool
-SimpleDeviceObj::DataPort::recvTimingResp(PacketPtr pkt)
-{
-    return owner->handleResponse(pkt);
-}
-
-bool
-SimpleDeviceObj::handleResponse(PacketPtr pkt)
-{
-    //assert(blocked);
-    Addr addr = pkt->getAddr();
-    DPRINTF(Device_Obj, "Got response for addr %" PRIx64 ", is %s\n", pkt->getAddr(), pkt->isRead()?"Read":"Write");
-    blocked = false;
-    if(pkt->isWrite())
-    {   
-        if(addr == SimpleDeviceObj::AddrList[0]){
-            if(LastStatus == ReSet){
-                DPRINTF(Device_Obj, "ReSet over\n");
-                Status = SetOK;
-            }
-        } else if(addr == SimpleDeviceObj::AddrList[3]){
-            if(LastStatus == SetOut){
-                DPRINTF(Device_Obj, "SetOut over\n");
-                Status = ReSet;
-            }
-        } else if(addr == SimpleDeviceObj::AddrList[4]){
-            if(LastStatus == SetOK){
-                DPRINTF(Device_Obj, "SetOK over\n");
-                Status = IDEL;
-            }
-        } else {
-            ;
-        }
-    } else {
-        DPRINTF(Device_Obj,"get Ptr ");
-        uint8_t* data = pkt->getPtr<uint8_t>();
-        DPRINTF(Device_Obj, "This ReadResponse pkt: addr= %" PRIx64 " ,data= %d\n", addr, *data);
-        if(addr == SimpleDeviceObj::AddrList[0]){
-            if(LastStatus == IDEL){
-                if(*data == 0xbb){
-                    DPRINTF(Device_Obj, "IDEL over\n");
-                    Status = GetA;
-                } else {
-                    DPRINTF(Device_Obj, "IDEL again\n");
-                    Status = IDEL;
-                }
-            }
-        } else if(addr == SimpleDeviceObj::AddrList[1]){
-            if(LastStatus == GetA){
-                DPRINTF(Device_Obj, "GetA over\n",*data);
-                inp.inA = *data;
-                Status = GetB;
-            }
-        } else if(SimpleDeviceObj::AddrList[2]){
-            if(LastStatus == GetB){
-                DPRINTF(Device_Obj, "GetB over\n",*data);
-                inp.inB = *data;
-                Status = RTLRun;
-            }
-        } else {
-            ;
-        }
-    }
-    return true;
-}
 
 void SimpleDeviceObj::evaluate()
 {
     wr->tick();
-    if(RequestCnt != 0){
-        RequestCnt --;
+    if(requestCnt != 0){
+        requestCnt --;
     } else {
-        RequestCnt = 300;
+        requestCnt = 300;
 
-        DPRINTF(Device_Obj,"evaluate! Status = %d\n",Status);
+        DPRINTF(Device_Obj,"evaluate! status = %d\n",status);
 
-        switch (Status) {
+        switch (status) {
             
             case IDEL:{
                 
@@ -448,13 +292,14 @@ void SimpleDeviceObj::evaluate()
                 inp.inB = deviceReg[2];
                 DPRINTF(Device_Obj, "inA = %ld, inB = %ld\n",inp.inA,inp.inB);
                 WrSetData();
-                Status = Waiting;
+                status = Waiting;
 
                 break;
             }
 
             case Waiting:{
-                if(wr->isOK()){
+
+                if(wr->isOK()){ 
                     WrGetData();
                     
                     deviceReg[3] = (uint8_t)out.out;
@@ -464,7 +309,7 @@ void SimpleDeviceObj::evaluate()
                     deviceReg[0] = 0;
                     
 
-                    Status = SetOK;
+                    status = SetOK;
                 }
 
                 break;
@@ -474,8 +319,8 @@ void SimpleDeviceObj::evaluate()
             case SetOK:{
 
                 deviceReg[4] = 0xaa;
-                DPRINTF(Device_Obj,"SetOK, ok = %d\n",deviceReg[4]);
-                Status = IDEL;
+                DPRINTF(Device_Obj,"SetOK, OK = %d\n",deviceReg[4]);
+                status = IDEL;
             }
 
 

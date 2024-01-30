@@ -33,37 +33,31 @@ import m5
 from m5.objects import *
 # from m5.objects import Cache
 
-
-class L1Cache(Cache):
-    assoc = 2
-    tag_latency = 2
-    data_latency = 2
-    response_latency = 2
-    mshrs = 4
-    tgts_per_mshr = 20
-class L1ICache(L1Cache):
-    size = '16kB'
-class L1DCache(L1Cache):
-    size = '64kB'
-
-
 #AddrRange(0xFFF0000000, size="8MB")
 uncacheable_range = [
-        [0x800400,0x800500]
+        #[AddrRange(0x1,size="512MB")],
+        [0x8000400,0x8000500]
+        #AddrRange(0x1C010000, size="1")
+        #[0xF0000000,0xF0000001],[0xF0000001,0xF0000002],[0xF0000002,0xF0000003]   
 ] 
+
 # deprecated
 deviceaddr_range = [
-    [0x800400,0x800500]
+    #[0x8000400,0x8000500]
+    [0x8000400,0x8000500]
 ]
-device_base_addr = 0x800400
+
 mem_range = [
-    [0x0,0x800000]
+    #[0x0,0x20000000],
+    [0x0,0x8000000],
+    #[0x420,0x20000000]
+    [0x10000,0x20000]
 ]
 
 addrlist = [
     #0x400,0x404,0x408,0x40c,0x410
     #0x7e400,0x7e404,0x7e408,0x7e40c,0x7e410
-    0x800400,0x800404,0x800408,0x80040c,0x800410
+    0x8000400,0x8000404,0x8000408,0x800040c,0x8000410
 ]
 
 system = System()
@@ -72,32 +66,28 @@ system.clk_domain = SrcClockDomain()
 system.clk_domain.clock = "1GHz"
 system.clk_domain.voltage_domain = VoltageDomain()
 
-system.device_clk_domain = SrcClockDomain()
-system.device_clk_domain.clock = "100MHz"
-system.device_clk_domain.voltage_domain = VoltageDomain()
-
-
 system.mem_mode = "timing"
 system.mem_ranges = mem_range#[AddrRange("512MB")]
 system.cpu = RiscvMinorCPU()
+
 system.membus = SystemXBar()
-system.device = SimpleDeviceObj(
-    device_addr=deviceaddr_range, 
-    # addr_list=addrlist,
-    clk_domain=system.device_clk_domain
-)
-# system.device = SimpleDeviceObj(
-#     device_addr=deviceaddr_range,
-#     device_base_addr=0x800400, 
-#     device_size=0x1000,
-#     #clk_domain=system.device_clk_domain
-# )
-system.driver = SimpleDriver(
-    filename="simdev",
-    deviceBaseAddr=device_base_addr
-)
-system.cpu.mmu.pma_checker = PMAChecker(uncacheable=uncacheable_range)
-#system.cpu.mmu.pma_checker = PMAChecker(uncacheable=uncacheable_range)
+
+system.device = SimpleDeviceObj(deviceaddr=deviceaddr_range, addr_list=addrlist )
+
+# get a Cache
+class L1Cache(Cache):
+    assoc = 2
+    tag_latency = 2
+    data_latency = 2
+    response_latency = 2
+    mshrs = 4
+    tgts_per_mshr = 20
+
+class L1ICache(L1Cache):
+    size = '16kB'
+
+class L1DCache(L1Cache):
+    size = '64kB'
 
 system.cpu.icache = L1ICache()
 system.cpu.dcache = L1DCache()
@@ -109,7 +99,6 @@ system.cpu.dcache_port = system.cpu.dcache.cpu_side
 system.device.device_side = system.membus.mem_side_ports
 
 
-
 system.cpu.icache.mem_side = system.membus.cpu_side_ports
 system.cpu.dcache.mem_side = system.membus.cpu_side_ports
 
@@ -117,10 +106,40 @@ system.cpu.createInterruptController()
 
 
 
+system.cpu.mmu.pma_checker = PMAChecker(uncacheable=uncacheable_range)
+
 system.mem_ctrl1 = MemCtrl()
 system.mem_ctrl1.dram = DDR3_1600_8x8()
 system.mem_ctrl1.dram.range = system.mem_ranges[0]
 system.mem_ctrl1.port = system.membus.mem_side_ports
+
+'''
+system.mem_ctrl1 = MemCtrl()
+system.mem_ctrl1.dram = DDR3_1600_8x8()
+system.mem_ctrl1.dram.range = m5.objects.AddrRange(
+0x0,
+size = 0x80000,
+intlvHighBit = 6,
+xorHighBit = 0,
+intlvBits = 1,
+intlvMatch = 0
+)
+
+
+system.mem_ctrl1.port = system.membus.mem_side_ports
+
+system.mem_ctrl2 = MemCtrl()
+system.mem_ctrl2.dram = DDR3_1600_8x8()
+system.mem_ctrl2.dram.range = m5.objects.AddrRange(
+0x0,
+size = 0x80000,
+intlvHighBit = 6,
+xorHighBit = 0,
+intlvBits = 1,
+intlvMatch = 1
+)
+system.mem_ctrl2.port = system.membus.mem_side_ports
+#'''
 system.system_port = system.membus.cpu_side_ports
 
 
@@ -130,15 +149,13 @@ binary = os.path.join(
     thispath,
     "../../",
     #"test_device/test3"
-    "test_device/test7"
+    "test_device/test6"
     #"tests/test-progs/hello/bin/riscv/linux/hello",
 )
 
 system.workload = SEWorkload.init_compatible(binary)
 
-process = Process(
-    drivers=[system.driver]
-)
+process = Process()
 process.cmd = [binary]
 system.cpu.workload = process
 system.cpu.createThreads()

@@ -13,11 +13,12 @@
 
 namespace gem5
 {
-    /*0x400 : enable signal: 0xbb is true
-      0x404 : inA
-      0x408 : inB
-      0x40c : out
-      0x410 : over signal: 0xaa is true
+    /*device register*/
+    /*[0]0x00 : enable signal: 0xbb is true
+      [1]0x04 : inA
+      [2]0x08 : inB
+      [3]0x0c : out
+      [4]0x10 : over signal: 0xaa is true
     */
 class SimpleDeviceObj : public TickedObject
 {
@@ -44,42 +45,21 @@ class SimpleDeviceObj : public TickedObject
                 void trySendRetry();
 
             protected:
-                Tick recvAtomic(PacketPtr pkt) override;
+                Tick recvAtomic(PacketPtr pkt) override{
+                    panic("recvAtomic unimpl. please use MinorCPU!\n");
+                }
 
                 void recvFunctional(PacketPtr pkt) override {
-                    //panic("recvFunctional unimpl.\n");  
+                    panic("recvFunctional unimpl.\n");  
                 }
 
                 bool recvTimingReq(PacketPtr pkt) override ;
 
                 void recvRespRetry() override ;
-
-                
+   
         };
 
 
-        class DataPort : public RequestPort
-        {
-            private:
-                SimpleDeviceObj *owner;
-                PacketPtr blockedPacket;
-            
-            public:
-                DataPort(const std::string& name, SimpleDeviceObj *owner) :
-                    RequestPort(name), owner(owner), blockedPacket(nullptr)
-                {  }
-
-                void sendPacket(PacketPtr pkt);
-            
-            protected:
-                bool recvTimingResp(PacketPtr pkt) override;
-                void recvReqRetry() override;
-                void recvRangeChange() override;
-
-        };     
-
-
-        DataPort dataPort;
 
         DevicePort devicePort;
 
@@ -91,13 +71,7 @@ class SimpleDeviceObj : public TickedObject
 
         void endRTLModel();
 
-        bool handleResponse(PacketPtr pkt);
-
-        bool handleData(Addr addr, uint8_t data);
-
         bool handleRequest(PacketPtr pkt);
-
-        void MakePacketAndTrytoSend(int index, MemCmd cmd);
 
         void sendResponse();
 
@@ -117,29 +91,26 @@ class SimpleDeviceObj : public TickedObject
 
         uint16_t requestorID;
 
-        int RequestCnt;
+        int requestCnt;
 
         enum DeviceStatus {
             IDEL,   //waiting enable signal
-                GetA,   //requiring dataA
-                GetB,   //requiring dataB
-            RTLRun,
-            Waiting,   //waiting for RTL 
-                SetOut, //output result
-                ReSet,  //reset RTLmodel and reset enable signal
-            SetOK,  //set complete signal
-            //Waiting //Waiting for changing to next status
+            RTLRun, //input data to RTL model to run
+            Waiting,   //waiting for RTL model
+            SetOK  //set complete signal
 
         };
 
-        DeviceStatus Status;
-        DeviceStatus LastStatus;
+        DeviceStatus status;
+    
 
         uint8_t deviceReg[addressNum];
 
         EventFunctionWrapper event;
 
         PacketPtr readyToRespPkt;
+        //specify the device register address
+        std::vector<Addr> AddrList; 
 
     public:
 
@@ -151,16 +122,14 @@ class SimpleDeviceObj : public TickedObject
 
         Port &getPort(const std::string &if_name, PortID idx=InvalidPortID) override;
 
+        //pointer of RTL wrapper
         Wrapper_SimDev *wr;
 
         //Device's address space
-        AddrRangeList deviceaddr;
+        AddrRangeList deviceAddr;
 
-        //specify the device register address
-        std::vector<Addr> AddrList;
-
-        //static constexpr Addr AddrList[addressNum] = {0x400,0x404,0x408,0x40c,0x410};
-
+        
+        
 };
 
 
