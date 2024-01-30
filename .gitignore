@@ -34,7 +34,7 @@ ext/rtl/simpledev_wrapper/verilator_simpledev_vcd
 ext/rtl/libVerilatorSimDev.so
 ext/rtl/packet_simdev.hh
 ext/rtl/wrapper_simdev.hh
-test_device/test.out
+test_device/test.o
 test_device/test
 gem5_device.patch
 configs/example/memcheck.cfg
