@@ -607,8 +607,6 @@ RequestPort::sendMemBackdoorReq(const MemBackdoorReq &req,
 inline bool
 RequestPort::sendTimingReq(PacketPtr pkt)
 {
-    //DPRINTF(MMU, "Allocating Page: %#x-%#x\n", vaddr, vaddr + size);
-    DPRINTF(Device_Mem, "sendTimingReq addr: %" PRIx64 " \n",pkt->getAddr());
     try {
         addTrace(pkt);
         bool succ = TimingRequestProtocol::sendReq(_responsePort, pkt);

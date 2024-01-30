@@ -114,7 +114,7 @@ binary = os.path.join(
     thispath,
     "../../",
     #"test_device/test3"
-    "test_device/test7"
+    "test_device/test"
     #"tests/test-progs/hello/bin/riscv/linux/hello",
 )
 

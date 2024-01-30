@@ -457,10 +457,8 @@ BaseCache::recvTimingReq(PacketPtr pkt)
                     pkt->getAddr(), pkt->isSecure() ? "s" : "ns");
             blk->clearPrefetched();
         }
-        DPRINTF(Device_Cache, "handleTimingReqHit %" PRIx64 " %s\n",pkt->getAddr(),pkt->isWrite()?"Write":"Read");
         handleTimingReqHit(pkt, blk, request_time);
     } else {
-        DPRINTF(Device_Cache, "handleTimingReqMiss %" PRIx64 " %s\n",pkt->getAddr(),pkt->isWrite()?"Write":"Read");
         handleTimingReqMiss(pkt, blk, forward_time, request_time);
 
         ppMiss->notify(CacheAccessProbeArg(pkt,accessor));
@@ -479,7 +477,6 @@ BaseCache::recvTimingReq(PacketPtr pkt)
 void
 BaseCache::handleUncacheableWriteResp(PacketPtr pkt)
 {
-    DPRINTF(Device_Cache, "handleUncacheableWriteResp %" PRIx64 " : %s\n",pkt->getAddr(),pkt->isWrite()?"Write":"Read");
     Tick completion_time = clockEdge(responseLatency) +
         pkt->headerDelay + pkt->payloadDelay;
 

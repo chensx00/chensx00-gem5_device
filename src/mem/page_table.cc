@@ -135,30 +135,23 @@ EmulationPageTable::isUnmapped(Addr vaddr, int64_t size)
 const EmulationPageTable::Entry *
 EmulationPageTable::lookup(Addr vaddr)
 {
-    DPRINTF(Device_Tran,"in 3tran1\n");
     Addr page_addr = pageAlign(vaddr);
-    DPRINTF(Device_Tran,"in 3tran2\n");
     PTableItr iter = pTable.find(page_addr);
-    DPRINTF(Device_Tran,"in 3tran3\n");
     if (iter == pTable.end())
         return nullptr;
-    DPRINTF(Device_Tran,"in 3tran4\n");
     return &(iter->second);
 }
 
 bool
 EmulationPageTable::translate(Addr vaddr, Addr &paddr)
 {
-    DPRINTF(Device_Tran,"in 2tran1\n");
     const Entry *entry = lookup(vaddr);
     if (!entry) {
         DPRINTF(MMU, "Couldn't Translate: %#x\n", vaddr);
         return false;
     }
-    DPRINTF(Device_Tran,"in 2tran2\n");
     paddr = pageOffset(vaddr) + entry->paddr;
     DPRINTF(MMU, "Translating: %#x->%#x\n", vaddr, paddr);
-    DPRINTF(Device_Tran,"in 2tran3\n");
     return true;
 }
 
@@ -166,22 +159,16 @@ Fault
 EmulationPageTable::translate(const RequestPtr &req)
 {
     Addr paddr;
-    DPRINTF(Device_Tran,"in tran\n");
     assert(pageAlign(req->getVaddr() + req->getSize() - 1) ==
            pageAlign(req->getVaddr()));
-    DPRINTF(Device_Tran,"in tran2\n");
     if (!translate(req->getVaddr(), paddr))
         return Fault(new GenericPageTableFault(req->getVaddr()));
-    DPRINTF(Device_Tran,"in tran3\n");
     req->setPaddr(paddr);
-    DPRINTF(Device_Tran,"in tran4\n");
     if ((paddr & (_pageSize - 1)) + req->getSize() > _pageSize) {
         panic("Request spans page boundaries!\n");
         return NoFault;
     }
 
-    DPRINTF(Device_Tran,"out tran\n");
-    DPRINTF(Device, "translate addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
 
     return NoFault;
 }

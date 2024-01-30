@@ -148,7 +148,6 @@ CoherentXBar::init()
 bool
 CoherentXBar::recvTimingReq(PacketPtr pkt, PortID cpu_side_port_id)
 {
-    //DPRINTF(Device_Obj,"CoherentXBar::recvTimingReq. pkt->addr=%#x, is %s, cpu_side_port_id = %d\n",pkt->getAddr(),pkt->isRead()?"Read":"Write",cpu_side_port_id);
     // determine the source port based on the id
     ResponsePort *src_port = cpuSidePorts[cpu_side_port_id];
 
@@ -323,7 +322,6 @@ CoherentXBar::recvTimingReq(PacketPtr pkt, PortID cpu_side_port_id)
         reqLayers[mem_side_port_id]->failedTiming(src_port,
                                                 clockEdge(Cycles(1)));
     } else {
-        //DPRINTF(Device_Obj,"Success. pkt->addr=%#x, is %s, cpu_side_port_id = %d\n",pkt->getAddr(),pkt->isRead()?"Read":"Write",cpu_side_port_id);
         // express snoops currently bypass the crossbar state entirely
         if (!is_express_snoop) {
             // if this particular request will generate a snoop
@@ -344,7 +342,6 @@ CoherentXBar::recvTimingReq(PacketPtr pkt, PortID cpu_side_port_id)
             if (expect_response || expect_snoop_resp) {
                 assert(routeTo.find(pkt->req) == routeTo.end());
                 routeTo[pkt->req] = cpu_side_port_id;
-                //DPRINTF(Device_Obj,"need response and add to routeTo. pkt->addr=%#x, is %s, cpu_side_port_id = %d\n",pkt->getAddr(),pkt->isRead()?"Read":"Write",cpu_side_port_id);
 
                 panic_if(routeTo.size() > maxRoutingTableSizeCheck,
                          "%s: Routing table exceeds %d packets\n",
@@ -413,7 +410,6 @@ CoherentXBar::recvTimingReq(PacketPtr pkt, PortID cpu_side_port_id)
             if (!pkt->isWrite()) {
                 assert(routeTo.find(pkt->req) == routeTo.end());
                 routeTo[pkt->req] = cpu_side_port_id;
-                //DPRINTF(Device_Obj,"need response and add to routeTo. 2 pkt->addr=%#x, is %s, cpu_side_port_id = %d\n",pkt->getAddr(),pkt->isRead()?"Read":"Write",cpu_side_port_id);
                 panic_if(routeTo.size() > maxRoutingTableSizeCheck,
                          "%s: Routing table exceeds %d packets\n",
                          name(), maxRoutingTableSizeCheck);
@@ -448,13 +444,7 @@ CoherentXBar::recvTimingReq(PacketPtr pkt, PortID cpu_side_port_id)
 
 bool
 CoherentXBar::recvTimingResp(PacketPtr pkt, PortID mem_side_port_id)
-{
-    if(mem_side_port_id == 0){
-        Addr addr = pkt->getAddr();
-        //DPRINTF(Device_Obj,"addr = %#x, is %s",addr\
-        ,pkt->isRead()?"Read":"Write");
-    }
-    
+{    
     // determine the source port based on the id
     RequestPort *src_port = memSidePorts[mem_side_port_id];
 

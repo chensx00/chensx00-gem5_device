@@ -377,7 +377,6 @@ TLB::translate(const RequestPtr &req, ThreadContext *tc,
         }
 
         if (!delayed && fault == NoFault) {
-            DPRINTF(Device, "going check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
             pma->check(req);
 
             // do pmp check if any checking condition is met.
@@ -400,33 +399,20 @@ TLB::translate(const RequestPtr &req, ThreadContext *tc,
             return std::make_shared<GenericPageTableFault>(req->getVaddr());
 
         Process * p = tc->getProcessPtr();
-        DPRINTF(Device_Tran,"in 0tran1\n");
         Fault fault = p->pTable->translate(req);
-        DPRINTF(Device_Tran,"in 0tran2\n");
-        //add this function to make uncache req
-        // DPRINTF(Device, "going check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
-        // pma->check(req);
+
 
         if (fault != NoFault)
             return fault;
 
-        // if(fault == NoFault){
-        //     Addr Vaddr = req->getVaddr();
-            
-        //     if((Vaddr>>6) == (deviceMask>>6)) {
-        //         DPRINTF(Device_Obj,"deviceMask : Vaddr = %#x\n",Vaddr);
-        //         req->setPaddr(Vaddr);
-        //     }
-        // }
+
         
         if (fault == NoFault){
-            DPRINTF(Device, "going check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
             pma->check(req);
         }
 
         
 
-        DPRINTF(Device_CPU,"translate : addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
 
         return NoFault;
     }

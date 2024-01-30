@@ -1,0 +1,2749 @@
+diff --git a/.gitignore b/.gitignore
+index d1904756d2..677a19fafa 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -29,8 +29,17 @@ m5out
+ /system/arm/bootloader/arm64/boot.arm64
+ /system/arm/bootloader/arm64/boot_emm.arm64
+ /system/arm/bootloader/arm64/boot_v2.arm64
++ext/rtl/simpledev_wrapper/libVerilatorSimDev.so
++ext/rtl/simpledev_wrapper/verilator_simpledev_vcd
++ext/rtl/libVerilatorSimDev.so
++ext/rtl/packet_simdev.hh
++ext/rtl/wrapper_simdev.hh
++test_device/*.o
++
+ configs/example/memcheck.cfg
+ configs/dram/lowp_sweep.cfg
+ .pyenv
+ .vscode
+ typings
++dev.vcd
++out.txt
+diff --git a/SConstruct b/SConstruct
+index ef4d154312..7cc7d35829 100755
+--- a/SConstruct
++++ b/SConstruct
+@@ -187,7 +187,8 @@ main = Environment(tools=[
+ 
+ main.Tool(SCons.Tool.FindTool(['gcc', 'clang'], main))
+ main.Tool(SCons.Tool.FindTool(['g++', 'clang++'], main))
+-
++if SCons.Tool.FindTool(['compilation_db'], main) is not None:
++    main.Tool('compilation_db')
+ Export('main')
+ 
+ from gem5_scons.util import get_termcap
+diff --git a/configs/common/Options.py b/configs/common/Options.py
+index 97335f13b9..2d7da297ae 100644
+--- a/configs/common/Options.py
++++ b/configs/common/Options.py
+@@ -241,6 +241,9 @@ def addNoISAOptions(parser):
+     )
+ 
+ 
++
++
++
+ # Add common options that assume a non-NULL ISA.
+ 
+ 
+@@ -768,6 +771,53 @@ def addSEOptions(parser):
+     )
+ 
+ 
++        # Simple Device
++    parser.add_argument(
++        "--device",
++        default=False,
++        action="store_true",
++        help="The flag of whether the device is connected or not",
++    )
++
++    parser.add_argument(
++        "--device-base-addr",
++        type=str,
++        default="0x800000",
++        action="store",
++        help="The base address of the device",
++    )
++
++    parser.add_argument(
++        "--device-mem-size",
++        action="store",
++        type=str,
++        default="0x1000",
++        help="Memory size of the device"
++    )
++
++    parser.add_argument(
++        "--device-voltage",
++        action="store",
++        type=str,
++        default="1.0V",
++        help="The voltage of the device",
++    )
++
++    parser.add_argument(
++        "--device-clock",
++        action="store",
++        type=str,
++        default="100MHz",
++        help="The clock of the device",
++    )
++
++
++
++
++
++
++
++
+ def addFSOptions(parser):
+     from common.FSConfig import os_types
+ 
+@@ -898,3 +948,4 @@ def addFSOptions(parser):
+         action="store_true",
+         help="Wait for remote GDB to connect.",
+     )
++
+diff --git a/configs/device/deprecated-device-riscv.py b/configs/device/deprecated-device-riscv.py
+new file mode 100644
+index 0000000000..23a7cc094c
+--- /dev/null
++++ b/configs/device/deprecated-device-riscv.py
+@@ -0,0 +1,168 @@
++# Copyright (c) 2015 Jason Power
++# All rights reserved.
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions are
++# met: redistributions of source code must retain the above copyright
++# notice, this list of conditions and the following disclaimer;
++# redistributions in binary form must reproduce the above copyright
++# notice, this list of conditions and the following disclaimer in the
++# documentation and/or other materials provided with the distribution;
++# neither the name of the copyright holders nor the names of its
++# contributors may be used to endorse or promote products derived from
++# this software without specific prior written permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++"""
++This is the RISCV equivalent to `simple.py` (which is designed to run using the
++X86 ISA). More detailed documentation can be found in `simple.py`.
++"""
++
++import m5
++from m5.objects import *
++# from m5.objects import Cache
++
++#AddrRange(0xFFF0000000, size="8MB")
++uncacheable_range = [
++        #[AddrRange(0x1,size="512MB")],
++        [0x8000400,0x8000500]
++        #AddrRange(0x1C010000, size="1")
++        #[0xF0000000,0xF0000001],[0xF0000001,0xF0000002],[0xF0000002,0xF0000003]   
++] 
++
++# deprecated
++deviceaddr_range = [
++    #[0x8000400,0x8000500]
++    [0x8000400,0x8000500]
++]
++
++mem_range = [
++    #[0x0,0x20000000],
++    [0x0,0x8000000],
++    #[0x420,0x20000000]
++    [0x10000,0x20000]
++]
++
++addrlist = [
++    #0x400,0x404,0x408,0x40c,0x410
++    #0x7e400,0x7e404,0x7e408,0x7e40c,0x7e410
++    0x8000400,0x8000404,0x8000408,0x800040c,0x8000410
++]
++
++system = System()
++
++system.clk_domain = SrcClockDomain()
++system.clk_domain.clock = "1GHz"
++system.clk_domain.voltage_domain = VoltageDomain()
++
++system.mem_mode = "timing"
++system.mem_ranges = mem_range#[AddrRange("512MB")]
++system.cpu = RiscvMinorCPU()
++
++system.membus = SystemXBar()
++
++system.device = SimpleDeviceObj(deviceaddr=deviceaddr_range, addr_list=addrlist )
++
++# get a Cache
++class L1Cache(Cache):
++    assoc = 2
++    tag_latency = 2
++    data_latency = 2
++    response_latency = 2
++    mshrs = 4
++    tgts_per_mshr = 20
++
++class L1ICache(L1Cache):
++    size = '16kB'
++
++class L1DCache(L1Cache):
++    size = '64kB'
++
++system.cpu.icache = L1ICache()
++system.cpu.dcache = L1DCache()
++
++system.cpu.icache_port = system.cpu.icache.cpu_side
++system.cpu.dcache_port = system.cpu.dcache.cpu_side
++
++#system.device.data_side = system.membus.cpu_side_ports
++system.device.device_side = system.membus.mem_side_ports
++
++
++system.cpu.icache.mem_side = system.membus.cpu_side_ports
++system.cpu.dcache.mem_side = system.membus.cpu_side_ports
++
++system.cpu.createInterruptController()
++
++
++
++system.cpu.mmu.pma_checker = PMAChecker(uncacheable=uncacheable_range)
++
++system.mem_ctrl1 = MemCtrl()
++system.mem_ctrl1.dram = DDR3_1600_8x8()
++system.mem_ctrl1.dram.range = system.mem_ranges[0]
++system.mem_ctrl1.port = system.membus.mem_side_ports
++
++'''
++system.mem_ctrl1 = MemCtrl()
++system.mem_ctrl1.dram = DDR3_1600_8x8()
++system.mem_ctrl1.dram.range = m5.objects.AddrRange(
++0x0,
++size = 0x80000,
++intlvHighBit = 6,
++xorHighBit = 0,
++intlvBits = 1,
++intlvMatch = 0
++)
++
++
++system.mem_ctrl1.port = system.membus.mem_side_ports
++
++system.mem_ctrl2 = MemCtrl()
++system.mem_ctrl2.dram = DDR3_1600_8x8()
++system.mem_ctrl2.dram.range = m5.objects.AddrRange(
++0x0,
++size = 0x80000,
++intlvHighBit = 6,
++xorHighBit = 0,
++intlvBits = 1,
++intlvMatch = 1
++)
++system.mem_ctrl2.port = system.membus.mem_side_ports
++#'''
++system.system_port = system.membus.cpu_side_ports
++
++
++
++thispath = os.path.dirname(os.path.realpath(__file__))
++binary = os.path.join(
++    thispath,
++    "../../",
++    #"test_device/test3"
++    "test_device/test6"
++    #"tests/test-progs/hello/bin/riscv/linux/hello",
++)
++
++system.workload = SEWorkload.init_compatible(binary)
++
++process = Process()
++process.cmd = [binary]
++system.cpu.workload = process
++system.cpu.createThreads()
++
++root = Root(full_system=False, system=system)
++m5.instantiate()
++
++print(f"Beginning simulation!")
++exit_event = m5.simulate()
++print(f"Exiting @ tick {m5.curTick()} because {exit_event.getCause()}")
+diff --git a/configs/device/device-riscv.py b/configs/device/device-riscv.py
+new file mode 100644
+index 0000000000..c126744070
+--- /dev/null
++++ b/configs/device/device-riscv.py
+@@ -0,0 +1,135 @@
++# Copyright (c) 2015 Jason Power
++# All rights reserved.
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions are
++# met: redistributions of source code must retain the above copyright
++# notice, this list of conditions and the following disclaimer;
++# redistributions in binary form must reproduce the above copyright
++# notice, this list of conditions and the following disclaimer in the
++# documentation and/or other materials provided with the distribution;
++# neither the name of the copyright holders nor the names of its
++# contributors may be used to endorse or promote products derived from
++# this software without specific prior written permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++"""
++This is the RISCV equivalent to `simple.py` (which is designed to run using the
++X86 ISA). More detailed documentation can be found in `simple.py`.
++"""
++
++import m5
++from m5.objects import *
++# from m5.objects import Cache
++
++
++class L1Cache(Cache):
++    assoc = 2
++    tag_latency = 2
++    data_latency = 2
++    response_latency = 2
++    mshrs = 4
++    tgts_per_mshr = 20
++class L1ICache(L1Cache):
++    size = '16kB'
++class L1DCache(L1Cache):
++    size = '64kB'
++
++
++
++uncacheable_range = [
++        [0x800400,0x800500]
++] 
++
++device_addr_range = [
++    [0x800400,0x800500]
++]
++
++device_base_addr = 0x800400
++
++mem_range = [
++    [0x0,0x800000]
++]
++
++system = System()
++
++system.clk_domain = SrcClockDomain()
++system.clk_domain.clock = "1GHz"
++system.clk_domain.voltage_domain = VoltageDomain()
++
++system.device_clk_domain = SrcClockDomain()
++system.device_clk_domain.clock = "100MHz"
++system.device_clk_domain.voltage_domain = VoltageDomain()
++
++
++
++system.cpu = RiscvMinorCPU()
++system.membus = SystemXBar()
++system.device = SimpleDeviceObj(
++    device_addr=device_addr_range, 
++    clk_domain=system.device_clk_domain
++)
++system.driver = SimpleDriver(
++    filename="simdev",
++    deviceBaseAddr=device_base_addr
++)
++system.cpu.mmu.pma_checker = PMAChecker(uncacheable=uncacheable_range)
++
++
++system.cpu.icache = L1ICache()
++system.cpu.dcache = L1DCache()
++
++system.cpu.icache_port = system.cpu.icache.cpu_side
++system.cpu.dcache_port = system.cpu.dcache.cpu_side
++
++system.device.device_side = system.membus.mem_side_ports
++system.cpu.icache.mem_side = system.membus.cpu_side_ports
++system.cpu.dcache.mem_side = system.membus.cpu_side_ports
++
++system.cpu.createInterruptController()
++
++system.mem_mode = "timing"
++system.mem_ranges = mem_range
++
++system.mem_ctrl1 = MemCtrl()
++system.mem_ctrl1.dram = DDR3_1600_8x8()
++system.mem_ctrl1.dram.range = system.mem_ranges[0]
++system.mem_ctrl1.port = system.membus.mem_side_ports
++system.system_port = system.membus.cpu_side_ports
++
++
++thispath = os.path.dirname(os.path.realpath(__file__))
++binary = os.path.join(
++    thispath,
++    "../../",
++    #"test_device/test3"
++    "test_device/test7"
++    #"tests/test-progs/hello/bin/riscv/linux/hello",
++)
++
++system.workload = SEWorkload.init_compatible(binary)
++
++process = Process(
++    drivers=[system.driver]
++)
++process.cmd = [binary]
++system.cpu.workload = process
++system.cpu.createThreads()
++
++root = Root(full_system=False, system=system)
++m5.instantiate()
++
++print(f"Beginning simulation!")
++exit_event = m5.simulate()
++print(f"Exiting @ tick {m5.curTick()} because {exit_event.getCause()}")
+diff --git a/configs/device/device-se.py b/configs/device/device-se.py
+new file mode 100644
+index 0000000000..ae2170c1ef
+--- /dev/null
++++ b/configs/device/device-se.py
+@@ -0,0 +1,345 @@
++# Copyright (c) 2012-2013 ARM Limited
++# All rights reserved.
++#
++# The license below extends only to copyright in the software and shall
++# not be construed as granting a license to any other intellectual
++# property including but not limited to intellectual property relating
++# to a hardware implementation of the functionality of the software
++# licensed hereunder.  You may use the software subject to the license
++# terms below provided that you ensure that this notice is replicated
++# unmodified and in its entirety in all distributions of the software,
++# modified or unmodified, in source code or in binary form.
++#
++# Copyright (c) 2006-2008 The Regents of The University of Michigan
++# All rights reserved.
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions are
++# met: redistributions of source code must retain the above copyright
++# notice, this list of conditions and the following disclaimer;
++# redistributions in binary form must reproduce the above copyright
++# notice, this list of conditions and the following disclaimer in the
++# documentation and/or other materials provided with the distribution;
++# neither the name of the copyright holders nor the names of its
++# contributors may be used to endorse or promote products derived from
++# this software without specific prior written permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++# Simple test script
++#
++# "m5 test.py"
++
++import argparse
++import os
++import sys
++
++import m5
++from m5.defines import buildEnv
++from m5.objects import *
++from m5.params import NULL
++from m5.util import (
++    addToPath,
++    fatal,
++    warn,
++)
++
++from gem5.isas import ISA
++
++# ! Note that the path here is modified depending on the hierarchy of the file 
++addToPath("../")
++#addToPath("../../")
++
++from common import (
++    CacheConfig,
++    CpuConfig,
++    MemConfig,
++    ObjectList,
++    Options,
++    Simulation,
++)
++from common.Caches import *
++from common.cpu2000 import *
++from common.FileSystemConfig import config_filesystem
++from ruby import Ruby
++
++
++def get_processes(args):
++    """Interprets provided args and returns a list of processes"""
++
++    multiprocesses = []
++    inputs = []
++    outputs = []
++    errouts = []
++    pargs = []
++
++    workloads = args.cmd.split(";")
++    if args.input != "":
++        inputs = args.input.split(";")
++    if args.output != "":
++        outputs = args.output.split(";")
++    if args.errout != "":
++        errouts = args.errout.split(";")
++    if args.options != "":
++        pargs = args.options.split(";")
++
++    idx = 0
++    for wrkld in workloads:
++        process = Process(pid=100 + idx)
++        process.executable = wrkld
++        process.cwd = os.getcwd()
++        process.gid = os.getgid()
++
++        if args.env:
++            with open(args.env) as f:
++                process.env = [line.rstrip() for line in f]
++
++        if len(pargs) > idx:
++            process.cmd = [wrkld] + pargs[idx].split()
++        else:
++            process.cmd = [wrkld]
++
++        if len(inputs) > idx:
++            process.input = inputs[idx]
++        if len(outputs) > idx:
++            process.output = outputs[idx]
++        if len(errouts) > idx:
++            process.errout = errouts[idx]
++
++        multiprocesses.append(process)
++        idx += 1
++
++    if args.smt:
++        cpu_type = ObjectList.cpu_list.get(args.cpu_type)
++        assert ObjectList.is_o3_cpu(cpu_type), "SMT requires an O3CPU"
++        return multiprocesses, idx
++    else:
++        return multiprocesses, 1
++
++
++warn(
++    "The se.py script is deprecated. It will be removed in future releases of "
++    " gem5."
++)
++
++parser = argparse.ArgumentParser()
++Options.addCommonOptions(parser)
++Options.addSEOptions(parser)
++
++if "--ruby" in sys.argv:
++    Ruby.define_options(parser)
++
++args = parser.parse_args()
++
++multiprocesses = []
++numThreads = 1
++
++if args.bench:
++    apps = args.bench.split("-")
++    if len(apps) != args.num_cpus:
++        print("number of benchmarks not equal to set num_cpus!")
++        sys.exit(1)
++
++    for app in apps:
++        try:
++            if ObjectList.cpu_list.get_isa(args.cpu_type) == ISA.ARM:
++                exec(
++                    "workload = %s('arm_%s', 'linux', '%s')"
++                    % (app, args.arm_iset, args.spec_input)
++                )
++            else:
++                # TARGET_ISA has been removed, but this is missing a ], so it
++                # has incorrect syntax and wasn't being used anyway.
++                exec(
++                    "workload = %s(buildEnv['TARGET_ISA', 'linux', '%s')"
++                    % (app, args.spec_input)
++                )
++            multiprocesses.append(workload.makeProcess())
++        except:
++            print(
++                f"Unable to find workload for ISA: {app}",
++                file=sys.stderr,
++            )
++            sys.exit(1)
++elif args.cmd:
++    multiprocesses, numThreads = get_processes(args)
++else:
++    print("No workload specified. Exiting!\n", file=sys.stderr)
++    sys.exit(1)
++
++
++(CPUClass, test_mem_mode, FutureClass) = Simulation.setCPUClass(args)
++CPUClass.numThreads = numThreads
++
++# Check -- do not allow SMT with multiple CPUs
++if args.smt and args.num_cpus > 1:
++    fatal("You cannot use SMT with multiple CPUs!")
++
++np = args.num_cpus
++mp0_path = multiprocesses[0].executable
++system = System(
++    cpu=[CPUClass(cpu_id=i) for i in range(np)],
++    mem_mode=test_mem_mode,
++    mem_ranges=[AddrRange(args.mem_size)],
++    cache_line_size=args.cacheline_size,
++)
++
++if numThreads > 1:
++    system.multi_thread = True
++
++# Create a top-level voltage domain
++system.voltage_domain = VoltageDomain(voltage=args.sys_voltage)
++
++# Create a source clock for the system and set the clock period
++system.clk_domain = SrcClockDomain(
++    clock=args.sys_clock, voltage_domain=system.voltage_domain
++)
++
++# Create a CPU voltage domain
++system.cpu_voltage_domain = VoltageDomain()
++
++# Create a separate clock domain for the CPUs
++system.cpu_clk_domain = SrcClockDomain(
++    clock=args.cpu_clock, voltage_domain=system.cpu_voltage_domain
++)
++
++# If elastic tracing is enabled, then configure the cpu and attach the elastic
++# trace probe
++if args.elastic_trace_en:
++    CpuConfig.config_etrace(CPUClass, system.cpu, args)
++
++# All cpus belong to a common cpu_clk_domain, therefore running at a common
++# frequency.
++for cpu in system.cpu:
++    cpu.clk_domain = system.cpu_clk_domain
++
++if ObjectList.is_kvm_cpu(CPUClass) or ObjectList.is_kvm_cpu(FutureClass):
++    if buildEnv["USE_X86_ISA"]:
++        system.kvm_vm = KvmVM()
++        system.m5ops_base = 0xFFFF0000
++        for process in multiprocesses:
++            process.useArchPT = True
++            process.kvmInSE = True
++    else:
++        fatal("KvmCPU can only be used in SE mode with x86")
++
++# Sanity check
++if args.simpoint_profile:
++    if not ObjectList.is_noncaching_cpu(CPUClass):
++        fatal("SimPoint/BPProbe should be done with an atomic cpu")
++    if np > 1:
++        fatal("SimPoint generation not supported with more than one CPUs")
++
++for i in range(np):
++    if args.smt:
++        system.cpu[i].workload = multiprocesses
++    elif len(multiprocesses) == 1:
++        system.cpu[i].workload = multiprocesses[0]
++    else:
++        system.cpu[i].workload = multiprocesses[i]
++
++    if args.simpoint_profile:
++        system.cpu[i].addSimPointProbe(args.simpoint_interval)
++
++    if args.checker:
++        system.cpu[i].addCheckerCpu()
++
++    if args.bp_type:
++        bpClass = ObjectList.bp_list.get(args.bp_type)
++        system.cpu[i].branchPred = bpClass()
++
++    if args.indirect_bp_type:
++        indirectBPClass = ObjectList.indirect_bp_list.get(
++            args.indirect_bp_type
++        )
++        system.cpu[i].branchPred.indirectBranchPred = indirectBPClass()
++
++    system.cpu[i].createThreads()
++
++if args.ruby:
++    Ruby.create_system(args, False, system)
++    assert args.num_cpus == len(system.ruby._cpu_ports)
++
++    system.ruby.clk_domain = SrcClockDomain(
++        clock=args.ruby_clock, voltage_domain=system.voltage_domain
++    )
++    for i in range(np):
++        ruby_port = system.ruby._cpu_ports[i]
++
++        # Create the interrupt controller and connect its ports to Ruby
++        # Note that the interrupt controller is always present but only
++        # in x86 does it have message ports that need to be connected
++        system.cpu[i].createInterruptController()
++
++        # Connect the cpu's cache ports to Ruby
++        ruby_port.connectCpuPorts(system.cpu[i])
++else:
++    MemClass = Simulation.setMemClass(args)
++    system.membus = SystemXBar()
++    system.system_port = system.membus.cpu_side_ports
++    CacheConfig.config_cache(args, system)
++    MemConfig.config_mem(args, system)
++    config_filesystem(system, args)
++
++
++    
++
++
++
++
++
++system.workload = SEWorkload.init_compatible(mp0_path)
++
++#simple device
++if args.device:
++    device_base_addr = args.device_base_addr
++    device_voltage = args.device_voltage
++    device_clock = args.device_clock
++    device_clk_domain = SrcClockDomain()
++    device_clk_domain.clock = args.device_clock
++    device_clk_domain.voltage_domain = VoltageDomain(
++        voltage=args.device_voltage,
++    )
++
++    device_base_range = AddrRange(
++        device_base_addr,
++        size=args.device_mem_size,
++    )
++    
++
++    system.cpu[0].mmu.pma_checker = PMAChecker(uncacheable=device_base_range)
++    
++    system.device = SimpleDeviceObj(
++        device_addr=device_base_range,
++        clk_domain=device_clk_domain
++    )
++
++    system.driver = SimpleDriver(
++    filename="simdev",
++    deviceBaseAddr=device_base_addr
++    )
++    system.device.device_side = system.membus.mem_side_ports
++
++    process = Process(
++        drivers=[system.driver]
++    )
++    process.cmd = [mp0_path]
++    system.cpu[0].workload = process
++
++
++
++if args.wait_gdb:
++    system.workload.wait_for_remote_gdb = True
++
++root = Root(full_system=False, system=system)
++Simulation.run(args, root, system, FutureClass)
+diff --git a/configs/device/se.py b/configs/device/se.py
+new file mode 100644
+index 0000000000..c557c80313
+--- /dev/null
++++ b/configs/device/se.py
+@@ -0,0 +1,78 @@
++# Copyright (c) 2015 Jason Power
++# All rights reserved.
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions are
++# met: redistributions of source code must retain the above copyright
++# notice, this list of conditions and the following disclaimer;
++# redistributions in binary form must reproduce the above copyright
++# notice, this list of conditions and the following disclaimer in the
++# documentation and/or other materials provided with the distribution;
++# neither the name of the copyright holders nor the names of its
++# contributors may be used to endorse or promote products derived from
++# this software without specific prior written permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++"""
++This is the RISCV equivalent to `simple.py` (which is designed to run using the
++X86 ISA). More detailed documentation can be found in `simple.py`.
++"""
++
++import m5
++from m5.objects import *
++
++system = System()
++
++system.clk_domain = SrcClockDomain()
++system.clk_domain.clock = "1GHz"
++system.clk_domain.voltage_domain = VoltageDomain()
++
++system.mem_mode = "timing"
++system.mem_ranges = [AddrRange("512MB")]
++system.cpu = RiscvMinorCPU()
++
++system.membus = SystemXBar()
++
++system.cpu.icache_port = system.membus.cpu_side_ports
++system.cpu.dcache_port = system.membus.cpu_side_ports
++
++system.cpu.createInterruptController()
++
++system.mem_ctrl = MemCtrl()
++system.mem_ctrl.dram = DDR3_1600_8x8()
++system.mem_ctrl.dram.range = system.mem_ranges[0]
++system.mem_ctrl.port = system.membus.mem_side_ports
++
++system.system_port = system.membus.cpu_side_ports
++
++thispath = os.path.dirname(os.path.realpath(__file__))
++binary = os.path.join(
++    thispath,
++    "../../",
++    "test_device/test5",
++)
++
++system.workload = SEWorkload.init_compatible(binary)
++
++process = Process()
++process.cmd = [binary]
++system.cpu.workload = process
++system.cpu.createThreads()
++
++root = Root(full_system=False, system=system)
++m5.instantiate()
++
++print(f"Beginning simulation!")
++exit_event = m5.simulate()
++print(f"Exiting @ tick {m5.curTick()} because {exit_event.getCause()}")
+diff --git a/ext/rtl/SConscript b/ext/rtl/SConscript
+new file mode 100644
+index 0000000000..d139c140d3
+--- /dev/null
++++ b/ext/rtl/SConscript
+@@ -0,0 +1,20 @@
++# Add Verilator PATH
++
++import os
++Import('env')
++
++## Add VERILATOR PATH
++env.Append(CPPPATH=[Dir(os.environ['VERILATOR_ROOT'] + '/include')])
++env.Append(CPPPATH=[Dir(os.environ['VERILATOR_ROOT'] + '/include/vltstd')])
++## FIFO 
++## We need to use `srcnode` to specify a src path instead of using build path.
++## Gem5 takes out-of-tree building so that src path and build path are different
++env.Append(CPPPATH=[Dir('.').srcnode()])
++env.Append(CPPPATH=[Dir('simpledev_wrapper/verilator_simpledev_vcd').srcnode()])
++## Find the library path and add library
++env.Append(LIBS=['VerilatorSimDev'])
++env.Prepend(LIBPATH=Dir('.').srcnode())
++## Add dynamic link library path
++env.Append(LINKFLAGS=['-Wl,-rpath,' + str(Dir('.').srcnode())])
++
++env.Append(CPPDEFINES=['VM_SC=0', 'VM_TRACE=1','VL_THREADED=0'])
+\ No newline at end of file
+diff --git a/ext/rtl/extract_verilator.py b/ext/rtl/extract_verilator.py
+new file mode 100644
+index 0000000000..323178fa93
+--- /dev/null
++++ b/ext/rtl/extract_verilator.py
+@@ -0,0 +1,14 @@
++import sys
++import os
++
++if __name__ == '__main__':
++    if len(sys.argv) != 4:
++        print("Usage: python extract_verilator.py <file-prefix> <verilator_makefile_dir> <verilator_makefile>")
++        sys.exit(1)
++    f = os.popen(f"make -C {sys.argv[2]} -f {sys.argv[3]} debug-make")
++    resolved_cpp = []
++    for line in f:
++        if line.startswith("VM_GLOBAL"):
++            for c in line.split()[1:]:
++                resolved_cpp.append(sys.argv[1] + c + '.cpp')
++    print(' '.join(resolved_cpp))
+\ No newline at end of file
+diff --git a/ext/rtl/simpledev_wrapper/Makefile b/ext/rtl/simpledev_wrapper/Makefile
+new file mode 100644
+index 0000000000..4272bed8fa
+--- /dev/null
++++ b/ext/rtl/simpledev_wrapper/Makefile
+@@ -0,0 +1,37 @@
++DIR_VCD =verilator_simpledev_vcd
++CC=gcc
++CXX=g++
++OBJS_VERILATE='*.sv' # Modify with the rtl object files
++
++# export VERILATOR_ROOT=/home/csx/sw/verilator/v5.016
++# generate sv to cpp
++verilate_vcd: $(OBJS)
++	$(VERILATOR_ROOT)/bin/verilator -Wall -cc --trace Top.sv --Mdir $(DIR_VCD)
++
++
++build: verilate_vcd wrapper_simdev.cc wrapper_simdev.hh
++	g++ -I $(DIR_VCD) -I$(VERILATOR_ROOT)/include wrapper_simdev.cc $(DIR_VCD)/*.cpp \
++	$(shell python3 ../extract_verilator.py $(VERILATOR_ROOT)/include/ $(DIR_VCD) VTop.mk) \
++	-fpic  -shared -o libVerilatorSimDev.so
++
++install: libVerilatorSimDev.so
++	cp libVerilatorSimDev.so ../
++	cp wrapper_simdev.hh ../
++	cp packet_simdev.hh ../
++
++all: build
++	cp libVerilatorSimDev.so ../
++	cp wrapper_simdev.hh ../
++	cp packet_simdev.hh ../
++
++
++.PHONY: clean cleanall
++
++clean:
++	rm -rf $(DIR_VCD) libVerilatorSimDev.so
++
++cleanall:
++	rm -rf $(DIR_VCD) libVerilatorSimDev.so
++	rm -rf ../custom_packet_simdev.hh
++	rm -rf ../libVerilatorSimDev.so
++	rm -rf ../wrapper_simdev.hh
+\ No newline at end of file
+diff --git a/ext/rtl/simpledev_wrapper/SimDev.sv b/ext/rtl/simpledev_wrapper/SimDev.sv
+new file mode 100644
+index 0000000000..3e2245ed70
+--- /dev/null
++++ b/ext/rtl/simpledev_wrapper/SimDev.sv
+@@ -0,0 +1,66 @@
++
++module SimDev
++(
++    input wire clk,
++    input wire rst,
++    input wire ena,
++    input reg[7:0] inA,
++    input reg[7:0] inB,
++    output reg[7:0] out,
++    output reg ok/*,
++    output reg rdy,
++    output reg[2:0]cnt*/
++);
++
++
++reg rdy;
++reg[2:0] cnt;
++
++always_ff @( posedge clk ) begin : _Add
++    if(rst == 1'b1) begin
++        out <= 8'h0;
++    end else if(ena == 1'b1) begin
++        out <= inA + inB;
++    end else begin
++        out <= out;
++    end
++end
++
++
++always_ff @( posedge clk ) begin : _rdy
++    if(rst == 1'b1) begin
++        rdy <= 1'b0;
++    end else if(ena == 1'b1) begin
++        rdy <= 1'b1;
++    end /*else if(ok == 1'b1)begin
++        rdy <= 1'b0;
++    end */else begin
++        rdy <= 1'b0;
++    end
++end
++
++
++always_ff @( posedge clk ) begin : _cnt
++    if(rst == 1'b1) begin
++        cnt <= 3'b111;
++    end else if(rdy) begin
++        cnt <= cnt - 1;
++    end else if(cnt == 3'b111)begin
++        cnt <= cnt;
++    end else begin
++        cnt <= cnt -1;
++    end
++end
++
++always_ff @( posedge clk ) begin : _ok
++    if(rst == 1'b1) begin
++        ok <= 1'b0;
++    end else if(cnt == 3'h0) begin
++        ok <= 1'b1;
++    end else begin
++        ok <= 1'b0;
++    end
++end
++
++
++endmodule
+diff --git a/ext/rtl/simpledev_wrapper/Top.sv b/ext/rtl/simpledev_wrapper/Top.sv
+new file mode 100644
+index 0000000000..266c786d69
+--- /dev/null
++++ b/ext/rtl/simpledev_wrapper/Top.sv
+@@ -0,0 +1,21 @@
++module Top(
++    input clk,
++    input rst,
++    input ena,
++    input[7:0] inA,
++    input[7:0] inB,
++    output[7:0] out,
++    output ok
++);
++
++SimDev counter(
++    .clk(clk),
++    .rst(rst),
++    .ena(ena),
++    .inA(inA),
++    .inB(inB),
++    .out(out),
++    .ok(ok)
++);
++
++endmodule
+diff --git a/ext/rtl/simpledev_wrapper/packet_simdev.hh b/ext/rtl/simpledev_wrapper/packet_simdev.hh
+new file mode 100644
+index 0000000000..7d6e5a6651
+--- /dev/null
++++ b/ext/rtl/simpledev_wrapper/packet_simdev.hh
+@@ -0,0 +1,22 @@
++#ifndef __PACKET_SIMDEV_HH__
++#define __PACKET_SIMDEV_HH__
++
++#include <cstdlib>
++#include <iostream>
++
++struct inputSimDev
++{
++    uint64_t    ena;
++    uint64_t    rst;
++    uint64_t    inA;
++    uint64_t    inB;
++};
++
++struct outputSimDev
++{
++    uint64_t    out;
++    uint64_t    ok;
++};
++
++
++#endif
+\ No newline at end of file
+diff --git a/ext/rtl/simpledev_wrapper/wrapper_simdev.cc b/ext/rtl/simpledev_wrapper/wrapper_simdev.cc
+new file mode 100644
+index 0000000000..7aee016457
+--- /dev/null
++++ b/ext/rtl/simpledev_wrapper/wrapper_simdev.cc
+@@ -0,0 +1,92 @@
++
++#include "wrapper_simdev.hh"
++
++Wrapper_SimDev::Wrapper_SimDev(bool traceOn, std::string name):
++    tickcount(0),
++    fst(NULL),
++    fstname(name),
++    traceOn(traceOn)
++    
++{
++    top = new VTop;
++
++    Verilated::traceEverOn(traceOn);
++    fst = new VerilatedVcdC;
++    if (!fst) {
++        return;
++    }
++    top->trace(fst,5);
++
++    std::cout << fstname << std::endl;
++    fst->open(fstname.c_str());
++    reset();
++}
++
++Wrapper_SimDev::~Wrapper_SimDev() 
++{
++    if (fst) {
++        fst->dump(tickcount);
++        fst->close();
++        delete fst;
++    }
++    top->final();
++    delete top;
++    exit(EXIT_SUCCESS);
++}
++
++outputSimDev
++Wrapper_SimDev::getData()
++{
++    outputSimDev out;
++    out.out = top->out;
++    out.ok  = top->ok;
++    return out;
++}
++
++void
++Wrapper_SimDev::setData(inputSimDev in)
++{
++    top->ena = in.ena;
++    top->inA = in.inA;
++    top->inB = in.inB;
++    //printf("set data:ena=%" PRIx64 " inA=%" PRIx64 " inB=%" PRIx64 " \n",in.ena,in.inA,in.inB);
++}
++
++void
++Wrapper_SimDev::tick()
++{
++    top->clk = 0;
++    top->eval();
++    advanceTickCount();
++    top->clk = 1;
++    top->eval();
++    advanceTickCount();
++}
++
++void
++Wrapper_SimDev::reset()
++{
++    top->rst = 1;
++    this->tick();
++    top->rst = 0;
++}
++
++bool
++Wrapper_SimDev::isOK()
++{
++    
++    if(top->ok == 1){
++        //printf("isOK:ena=%d inA=%d inB=%d out=%d\n",top->ena,top->inA,top->inB,top->out);
++        return true;
++        }
++    else return false;
++}
++
++void 
++Wrapper_SimDev::advanceTickCount()
++{
++    if (fst and traceOn) {
++        fst->dump(tickcount);
++    }
++    tickcount++;
++}
+\ No newline at end of file
+diff --git a/ext/rtl/simpledev_wrapper/wrapper_simdev.hh b/ext/rtl/simpledev_wrapper/wrapper_simdev.hh
+new file mode 100644
+index 0000000000..73cbfee6b2
+--- /dev/null
++++ b/ext/rtl/simpledev_wrapper/wrapper_simdev.hh
+@@ -0,0 +1,45 @@
++#ifndef __WRAPPER_SIMDEV_HH__
++#define __WRAPPER_SIMDEV_HH__
++
++#include <cstdlib>
++#include <iostream>
++#include "VTop.h"
++#include "verilated.h"
++#include "verilated_vcd_c.h"
++#include "packet_simdev.hh"
++#include "packet_simdev.hh"
++
++
++
++
++class Wrapper_SimDev
++{
++    public:
++        Wrapper_SimDev(bool traceOn, std::string name);
++        ~Wrapper_SimDev ();
++
++        
++        void tick();
++        void reset();
++
++        outputSimDev getData();
++        void setData(inputSimDev in);
++        bool isOK();
++
++    private:
++        VTop *top;
++        uint64_t tickcount;
++        
++        std::string fstname;
++        bool traceOn;
++        VerilatedVcdC *fst;
++        void advanceTickCount();
++        //uint64_t tickcount;
++
++
++
++};
++
++
++
++#endif
+\ No newline at end of file
+diff --git a/src/SConscript b/src/SConscript
+index 52051b3256..718d899206 100644
+--- a/src/SConscript
++++ b/src/SConscript
+@@ -65,7 +65,9 @@ if env['CONF']['USE_EFENCE']:
+ Export('env')
+ 
+ build_env = list(env['CONF'].items())
+-
++# Generate compile_commands.json for language servers
++if 'CompilationDatabase' in env['BUILDERS']:
++    env.CompilationDatabase('compile_commands.json')
+ from code_formatter import code_formatter
+ 
+ def GdbXml(xml_id, symbol, tags=None, add_tags=None):
+diff --git a/src/arch/riscv/pma_checker.cc b/src/arch/riscv/pma_checker.cc
+index a64b387bca..aa42efea20 100644
+--- a/src/arch/riscv/pma_checker.cc
++++ b/src/arch/riscv/pma_checker.cc
+@@ -43,7 +43,7 @@
+ #include "mem/request.hh"
+ #include "params/PMAChecker.hh"
+ #include "sim/sim_object.hh"
+-
++#include "debug/Device.hh"
+ namespace gem5
+ {
+ 
+@@ -56,9 +56,15 @@ uncacheable(params.uncacheable.begin(), params.uncacheable.end())
+ void
+ PMAChecker::check(const RequestPtr &req)
+ {
++        DPRINTF(Device, "In check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
+     if (isUncacheable(req->getPaddr(), req->getSize())) {
++        DPRINTF(Device, "Is uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
+         req->setFlags(Request::UNCACHEABLE | Request::STRICT_ORDER);
+     }
++    else {
++        DPRINTF(Device, "No uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
++    }
++    
+ }
+ 
+ bool
+diff --git a/src/arch/riscv/tlb.cc b/src/arch/riscv/tlb.cc
+index 679806ec8c..72bd7efd67 100644
+--- a/src/arch/riscv/tlb.cc
++++ b/src/arch/riscv/tlb.cc
+@@ -53,7 +53,10 @@
+ #include "sim/full_system.hh"
+ #include "sim/process.hh"
+ #include "sim/system.hh"
+-
++#include "debug/Device.hh"
++#include "debug/Device_Tran.hh"
++#include "debug/Device_CPU.hh"
++#include "debug/Device_Obj.hh"
+ namespace gem5
+ {
+ 
+@@ -374,6 +377,7 @@ TLB::translate(const RequestPtr &req, ThreadContext *tc,
+         }
+ 
+         if (!delayed && fault == NoFault) {
++            DPRINTF(Device, "going check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
+             pma->check(req);
+ 
+             // do pmp check if any checking condition is met.
+@@ -396,11 +400,34 @@ TLB::translate(const RequestPtr &req, ThreadContext *tc,
+             return std::make_shared<GenericPageTableFault>(req->getVaddr());
+ 
+         Process * p = tc->getProcessPtr();
+-
++        DPRINTF(Device_Tran,"in 0tran1\n");
+         Fault fault = p->pTable->translate(req);
++        DPRINTF(Device_Tran,"in 0tran2\n");
++        //add this function to make uncache req
++        // DPRINTF(Device, "going check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
++        // pma->check(req);
++
+         if (fault != NoFault)
+             return fault;
+ 
++        // if(fault == NoFault){
++        //     Addr Vaddr = req->getVaddr();
++            
++        //     if((Vaddr>>6) == (deviceMask>>6)) {
++        //         DPRINTF(Device_Obj,"deviceMask : Vaddr = %#x\n",Vaddr);
++        //         req->setPaddr(Vaddr);
++        //     }
++        // }
++        
++        if (fault == NoFault){
++            DPRINTF(Device, "going check uncache: addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
++            pma->check(req);
++        }
++
++        
++
++        DPRINTF(Device_CPU,"translate : addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
++
+         return NoFault;
+     }
+ }
+diff --git a/src/arch/riscv/tlb.hh b/src/arch/riscv/tlb.hh
+index f37143dfb7..90d6397a18 100644
+--- a/src/arch/riscv/tlb.hh
++++ b/src/arch/riscv/tlb.hh
+@@ -69,6 +69,9 @@ class TLB : public BaseTLB
+ 
+     Walker *walker;
+ 
++    //device addr mask
++    Addr deviceMask = 0x8000400;
++
+     struct TlbStats : public statistics::Group
+     {
+         TlbStats(statistics::Group *parent);
+diff --git a/src/cpu/minor/SConscript b/src/cpu/minor/SConscript
+index 0b98037d6d..48e8876fa0 100644
+--- a/src/cpu/minor/SConscript
++++ b/src/cpu/minor/SConscript
+@@ -68,6 +68,8 @@ if env['CONF']['BUILD_ISA']:
+     DebugFlag('MinorTrace', 'MinorTrace cycle-by-cycle state trace')
+     DebugFlag('MinorTiming', 'Extra timing for instructions')
+ 
++    DebugFlag('Device_CPU')
++
+     CompoundFlag('Minor', [
+         'MinorCPU', 'MinorExecute', 'MinorInterrupt', 'MinorMem',
+         'MinorScoreboard'])
+diff --git a/src/cpu/minor/lsq.cc b/src/cpu/minor/lsq.cc
+index 4b31b26577..7475e139da 100644
+--- a/src/cpu/minor/lsq.cc
++++ b/src/cpu/minor/lsq.cc
+@@ -50,6 +50,8 @@
+ #include "debug/Activity.hh"
+ #include "debug/MinorMem.hh"
+ 
++#include "debug/Device_CPU.hh"
++
+ namespace gem5
+ {
+ 
+@@ -1295,9 +1297,19 @@ LSQ::canSendToMemorySystem()
+ bool
+ LSQ::recvTimingResp(PacketPtr response)
+ {
++
+     LSQRequestPtr request =
+         safe_cast<LSQRequestPtr>(response->popSenderState());
+ 
++    if(response->isRead()){
++        DPRINTF(Device_CPU, "This ReadResponse pkt: addr= %" PRIx64 " ,data= %d\n", response->getAddr(), *(response->getPtr<uint8_t>()));
++    }
++
++    // DPRINTF(Device_CPU, "Received response packet inst: %s"
++    //     " addr: 0x%x cmd: %s\n",
++    //     *(request->inst), response->getAddr(),
++    //     response->cmd.toString());
++
+     DPRINTF(MinorMem, "Received response packet inst: %s"
+         " addr: 0x%x cmd: %s\n",
+         *(request->inst), response->getAddr(),
+diff --git a/src/device/SConscript b/src/device/SConscript
+new file mode 100644
+index 0000000000..50c0e36ec8
+--- /dev/null
++++ b/src/device/SConscript
+@@ -0,0 +1,13 @@
++Import('*')
++
++SimObject('SimpleDeviceObj.py', sim_objects=['SimpleDeviceObj','SimpleDriver'])
++
++#SimObject('SimpleDriver.py', sim_objects=['SimpleDriver'])
++
++Source('simple_deviceobj.cc')
++Source('simple_driver.cc')
++
++DebugFlag('Device_Obj', "Print out Device_Obj debug messages")
++DebugFlag('Device_Obj_begin')
++
++DebugFlag('Device_Driver')
+diff --git a/src/device/SimpleDeviceObj.py b/src/device/SimpleDeviceObj.py
+new file mode 100644
+index 0000000000..591256f1ff
+--- /dev/null
++++ b/src/device/SimpleDeviceObj.py
+@@ -0,0 +1,20 @@
++from m5.params import *
++from m5.SimObject import SimObject
++from m5.objects import TickedObject
++from m5.objects.Process import EmulatedDriver
++class SimpleDeviceObj(TickedObject):
++    type = "SimpleDeviceObj"
++    cxx_header = "device/simple_deviceobj.hh"
++    cxx_class  = "gem5::SimpleDeviceObj"
++
++    data_side = RequestPort("MemBus side port,1.get device's input,2.set device's result")
++    device_side = ResponsePort("MemBus side port, device port")
++    device_addr = VectorParam.AddrRange([], "Uncacheable address ranges")
++
++class SimpleDriver(EmulatedDriver):
++    type = "SimpleDriver"
++    cxx_header = "device/simple_driver.hh"
++    cxx_class = "gem5::SimpleDriver"
++
++    deviceBaseAddr = Param.Addr("device's base address")
++
+diff --git a/src/device/simple_deviceobj.cc b/src/device/simple_deviceobj.cc
+new file mode 100644
+index 0000000000..7b90eca751
+--- /dev/null
++++ b/src/device/simple_deviceobj.cc
+@@ -0,0 +1,371 @@
++#include "device/simple_deviceobj.hh"
++#include "base/trace.hh"
++#include "debug/Device_Obj.hh"
++#include "base/flags.hh"
++#include "debug/Device_Obj_begin.hh"
++
++
++namespace gem5
++{
++
++SimpleDeviceObj::SimpleDeviceObj(const SimpleDeviceObjParams &params) :
++    TickedObject(params),
++    devicePort(params.name + ".device_side", this),
++    blocked(false),
++    ptrData(0),
++    requestorID(0),
++    requestCnt(100),
++    status(IDEL),
++    event([this]{sendResponse();},name()),
++    readyToRespPkt(nullptr),
++    wr(nullptr),
++    deviceAddr(params.device_addr.begin(),params.device_addr.end())
++    //AddrList(params.addr_list)
++    
++    
++    
++{
++
++
++    ResetDeviceReg();
++
++    Addr addr = deviceAddr.front().start();
++    DPRINTF(Device_Obj,"this_addr = %#x\n",addr);
++
++    //init AddrList 
++    for(int i=0; i<6; i++){
++        AddrList.push_back(addr);
++        addr = addr + 4;
++
++    }
++        for(int i=0; i<6; i++){
++        DPRINTF(Device_Obj,"AddrList[%d] = %#x\n",i,AddrList[i]);
++    }
++    
++
++    wr = new Wrapper_SimDev(true,"dev.vcd");
++    registerExitCallback([this]() {
++        delete this->wr;
++        this->wr = nullptr;
++    });
++}
++
++
++void 
++SimpleDeviceObj::startup() {start(); }
++
++void
++SimpleDeviceObj::init() 
++{
++    DPRINTF(Device_Obj,"SimpleDeviceObj:enablePort.sendRangeChange\n");
++    devicePort.sendRangeChange();
++}
++
++void
++SimpleDeviceObj::ResetDeviceReg()
++{
++    for(int i = 0; i < addressNum; i++){
++        deviceReg[i] = 0;
++    }
++}
++
++Port &
++SimpleDeviceObj::getPort(const std::string &if_name, PortID idx)
++{
++    panic_if(idx != InvalidPortID, "This object dosen't support vector ports");
++    if(if_name == "device_side"){
++        return devicePort;
++    } else {
++        return SimObject::getPort(if_name, idx);
++    }
++}
++
++void
++SimpleDeviceObj::sendRangeChange()
++{
++    devicePort.sendRangeChange();
++}
++
++AddrRangeList 
++SimpleDeviceObj::DevicePort::getAddrRanges() const
++{
++    return owner -> deviceAddr;
++}
++
++bool
++SimpleDeviceObj::DevicePort::recvTimingReq(PacketPtr pkt)
++{
++    return owner->handleRequest(pkt);
++}
++
++bool
++SimpleDeviceObj::handleRequest(PacketPtr pkt)
++{
++
++    const bool expect_response = pkt->needsResponse() && !pkt->cacheResponding();
++    DPRINTF(Device_Obj,\
++        "recvTimingReq : Got request for addr %" PRIx64 ", is %s , is %s\n", \
++        pkt->getAddr(), pkt->isRead()?"Read":"Write",\
++        expect_response?"need_response":"dont need_response");
++
++    
++
++    Addr reqAddr = pkt->getAddr();
++    
++
++    if(pkt->isWrite()) {
++        uint8_t* data = pkt->getPtr<uint8_t>();
++        if(reqAddr == SimpleDeviceObj::AddrList[0]){ // if enable = true
++            deviceReg[0] = *data & (0x00 | 0xff);
++            DPRINTF(Device_Obj,"SetE, E = %d\n",deviceReg[0]);
++
++            if(status == IDEL){
++                if(deviceReg[0] == 0xbb){
++                    deviceReg[4] = 0; // reset OK signal
++                    DPRINTF(Device_Obj,"IDEL over\n");
++                    status = RTLRun;
++                }
++            }
++            pkt->makeResponse();
++
++
++        } else if(reqAddr == SimpleDeviceObj::AddrList[1]){ // inA
++            deviceReg[1] = *data & (0x00 | 0xff);
++            pkt->makeResponse(); 
++            DPRINTF(Device_Obj,"SetA, A = %d\n",deviceReg[1]);
++
++
++        } else if(reqAddr == SimpleDeviceObj::AddrList[2]){ // inB
++            deviceReg[2] = *data & (0x00 | 0xff);
++            pkt->makeResponse();
++            DPRINTF(Device_Obj,"SetB, B = %d\n",deviceReg[2]);
++
++
++        } else if(reqAddr == SimpleDeviceObj::AddrList[3]){ // Out
++            deviceReg[3] = *data & (0x00 | 0xff);
++            pkt->makeResponse();
++            DPRINTF(Device_Obj,"SetOut, Out = %d\n",deviceReg[3]);            
++
++
++        } else if(reqAddr == SimpleDeviceObj::AddrList[4]){ // over
++            deviceReg[4] = *data & (0x00 | 0xff);
++            pkt->makeResponse();           
++            DPRINTF(Device_Obj,"SetOK, OK = %d\n",deviceReg[4]); 
++
++
++
++        } else {
++            DPRINTF(Device_Obj,"handleRequest : else write\n");
++            DPRINTF(Device_Obj,"pkt : addr = %#x,data = %d\n",reqAddr,*data);
++        }
++
++    } else if(pkt->isRead()) {
++        if(reqAddr == SimpleDeviceObj::AddrList[0]){
++            pkt -> makeResponse();         
++            pkt -> setData(&deviceReg[0]);
++            DPRINTF(Device_Obj,"SendE, E = %d\n",deviceReg[0]);
++
++
++        } else if(reqAddr == SimpleDeviceObj::AddrList[1]){
++            pkt->makeResponse();
++            pkt -> setData(&deviceReg[1]);
++            DPRINTF(Device_Obj,"SendA, A = %d\n",deviceReg[1]);
++      
++
++
++        } else if(reqAddr == SimpleDeviceObj::AddrList[2]){
++            pkt->makeResponse();
++            pkt -> setData(&deviceReg[2]);
++            DPRINTF(Device_Obj,"SendB, B = %d\n",deviceReg[2]);
++           
++
++
++        } else if(reqAddr == SimpleDeviceObj::AddrList[3]){
++            pkt->makeResponse();
++            pkt -> setData(&deviceReg[3]);
++            DPRINTF(Device_Obj,"SendOut, Out = %d\n",deviceReg[3]);
++        
++
++
++        } else if(reqAddr == SimpleDeviceObj::AddrList[4]){
++            pkt->makeResponse();
++            pkt -> setData(&deviceReg[4]);
++            DPRINTF(Device_Obj,"SendOK, OK = %d\n",deviceReg[4]);
++           
++
++
++        } else {
++            DPRINTF(Device_Obj,"handleRequest : else read\n");
++        }
++
++    } else {
++        DPRINTF(Device_Obj,"handleRequest : else\n");
++    }
++
++    if(expect_response)
++    {
++        readyToRespPkt = pkt;
++        schedule(event,curTick()+1000);
++           
++    }
++
++    return true;
++
++
++}
++
++
++
++void 
++SimpleDeviceObj::sendResponse()
++{
++    DPRINTF(Device_Obj,"sendResponse, addr = %" PRIx64 ", is %s\n",readyToRespPkt->getAddr(),readyToRespPkt->isRead()?"Read":"Write");
++
++    devicePort.sendPacket(readyToRespPkt);
++}
++
++
++
++
++void 
++SimpleDeviceObj::DevicePort::sendPacket(PacketPtr pkt)
++{
++    panic_if(blockedPacket != nullptr, "Should never try to send if blocked!");
++    
++    if(!sendTimingResp(pkt)) {
++        blockedPacket = pkt;   
++    }
++}
++
++void 
++SimpleDeviceObj::DevicePort::trySendRetry()
++{
++    if (blockedPacket == nullptr) {
++        // Only send a retry if the port is now completely free
++        
++        DPRINTF(Device_Obj, "Sending retry req.\n");
++        sendRetryReq();
++    }
++}
++
++void
++SimpleDeviceObj::DevicePort:: recvRespRetry()
++{
++    // We should have a blocked packet if this function is called.
++    assert(blockedPacket != nullptr);
++
++    // Grab the blocked packet.
++    PacketPtr pkt = blockedPacket;
++    blockedPacket = nullptr;
++
++    DPRINTF(Device_Obj, "Retrying response pkt %s\n", pkt->print());
++    // Try to resend it. It's possible that it fails again.
++    sendPacket(pkt);
++
++    // We may now be able to accept new packets
++    trySendRetry();
++}
++
++
++
++
++void SimpleDeviceObj::evaluate()
++{
++    wr->tick();
++    if(requestCnt != 0){
++        requestCnt --;
++    } else {
++        requestCnt = 300;
++
++        DPRINTF(Device_Obj,"evaluate! status = %d\n",status);
++
++        switch (status) {
++            
++            case IDEL:{
++                
++                break;
++            }
++
++            case RTLRun:{
++                DPRINTF(Device_Obj, "RTLRun\n");
++                inp.inA = deviceReg[1];
++                inp.inB = deviceReg[2];
++                DPRINTF(Device_Obj, "inA = %ld, inB = %ld\n",inp.inA,inp.inB);
++                WrSetData();
++                status = Waiting;
++
++                break;
++            }
++
++            case Waiting:{
++
++                if(wr->isOK()){ 
++                    WrGetData();
++                    
++                    deviceReg[3] = (uint8_t)out.out;
++                    DPRINTF(Device_Obj,"Waiting : wr->isOK, out = %d\n",deviceReg[3]);
++                    
++                    WrReset();
++                    deviceReg[0] = 0;
++                    
++
++                    status = SetOK;
++                }
++
++                break;
++
++            }
++
++            case SetOK:{
++
++                deviceReg[4] = 0xaa;
++                DPRINTF(Device_Obj,"SetOK, OK = %d\n",deviceReg[4]);
++                status = IDEL;
++            }
++
++
++            default:{
++                ;
++            }
++        }
++
++
++
++
++    }
++
++
++}
++
++
++bool 
++SimpleDeviceObj::WrSetData()
++{
++    inp.ena = 1;
++    wr->setData(inp);
++    return true;
++}
++
++bool
++SimpleDeviceObj::WrGetData()
++{
++    out = wr->getData();
++    return true;
++}
++
++bool
++SimpleDeviceObj::WrReset()
++{
++    wr->reset();
++    return true;
++}
++
++void 
++SimpleDeviceObj::endRTLModel()
++{
++    delete wr;
++    wr = nullptr;
++}
++
++
++} //namespace gem5
+\ No newline at end of file
+diff --git a/src/device/simple_deviceobj.hh b/src/device/simple_deviceobj.hh
+new file mode 100644
+index 0000000000..e5635f8e83
+--- /dev/null
++++ b/src/device/simple_deviceobj.hh
+@@ -0,0 +1,141 @@
++#ifndef __SIMPLE_DEVICEOBJ_HH__
++#define __SIMPLE_DEVICEOBJ_HH__
++#include "mem/port.hh"
++#include "params/SimpleDeviceObj.hh"
++#include "sim/clocked_object.hh"
++#include "sim/cur_tick.hh"
++#include "sim/sim_object.hh"
++#include "sim/ticked_object.hh"
++#include "wrapper_simdev.hh"
++
++#define addressNum 5
++
++
++namespace gem5
++{
++    /*device register*/
++    /*[0]0x00 : enable signal: 0xbb is true
++      [1]0x04 : inA
++      [2]0x08 : inB
++      [3]0x0c : out
++      [4]0x10 : over signal: 0xaa is true
++    */
++class SimpleDeviceObj : public TickedObject
++{
++    public:
++        //static constexpr Addr AddrList[addressNum] = {0x400,0x404,0x408,0x40c,0x410};
++
++    private:
++    //deprecated, since the same address cannot belong to two different ReadesponsePort
++
++        class DevicePort : public ResponsePort{
++            private:
++                SimpleDeviceObj *owner;
++                PacketPtr blockedPacket;
++
++            public:
++                DevicePort(const std::string& _name, SimpleDeviceObj *_owner) :
++                    ResponsePort(_name),owner(_owner),blockedPacket(nullptr)
++                { }
++
++                void sendPacket(PacketPtr pkt);
++
++                AddrRangeList getAddrRanges() const override;
++
++                void trySendRetry();
++
++            protected:
++                Tick recvAtomic(PacketPtr pkt) override{
++                    panic("recvAtomic unimpl. please use MinorCPU!\n");
++                }
++
++                void recvFunctional(PacketPtr pkt) override {
++                    panic("recvFunctional unimpl.\n");  
++                }
++
++                bool recvTimingReq(PacketPtr pkt) override ;
++
++                void recvRespRetry() override ;
++   
++        };
++
++
++
++        DevicePort devicePort;
++
++        bool blocked;
++
++        void sendRangeChange();
++        
++        void evaluate() override;
++
++        void endRTLModel();
++
++        bool handleRequest(PacketPtr pkt);
++
++        void sendResponse();
++
++        void ResetDeviceReg();                
++
++        bool WrSetData();
++
++        bool WrGetData(); 
++
++        bool WrReset();
++
++        inputSimDev inp;
++
++        outputSimDev out;
++        
++        uint8_t ptrData;
++
++        uint16_t requestorID;
++
++        int requestCnt;
++
++        enum DeviceStatus {
++            IDEL,   //waiting enable signal
++            RTLRun, //input data to RTL model to run
++            Waiting,   //waiting for RTL model
++            SetOK  //set complete signal
++
++        };
++
++        DeviceStatus status;
++    
++
++        uint8_t deviceReg[addressNum];
++
++        EventFunctionWrapper event;
++
++        PacketPtr readyToRespPkt;
++        //specify the device register address
++        std::vector<Addr> AddrList; 
++
++    public:
++
++        SimpleDeviceObj(const SimpleDeviceObjParams &params);
++
++        void startup() override;
++        
++        void init() override;
++
++        Port &getPort(const std::string &if_name, PortID idx=InvalidPortID) override;
++
++        //pointer of RTL wrapper
++        Wrapper_SimDev *wr;
++
++        //Device's address space
++        AddrRangeList deviceAddr;
++
++        
++        
++};
++
++
++
++
++
++} //namespace gem5
++
++#endif
+\ No newline at end of file
+diff --git a/src/device/simple_driver.cc b/src/device/simple_driver.cc
+new file mode 100644
+index 0000000000..648656d2ea
+--- /dev/null
++++ b/src/device/simple_driver.cc
+@@ -0,0 +1,75 @@
++#include "device/simple_driver.hh"
++
++#include <memory>
++#include "cpu/thread_context.hh"
++#include "base/compiler.hh"
++#include "base/logging.hh"
++#include "base/trace.hh"
++#include "base/flags.hh"
++
++#include "mem/port_proxy.hh"
++#include "mem/se_translating_port_proxy.hh"
++#include "mem/translating_port_proxy.hh"
++
++#include "sim/process.hh"
++#include "sim/se_workload.hh"
++#include "sim/syscall_emul_buf.hh"
++#include "sim/fd_entry.hh"
++
++#include "debug/Device_Driver.hh"
++
++namespace gem5
++{
++
++SimpleDriver::SimpleDriver(const SimpleDriverParams &p) : 
++    EmulatedDriver(p),
++    deviceBaseAddr(p.deviceBaseAddr)
++    
++{
++    DPRINTF(Device_Driver,"SimpleDriver constructor\n");    
++    
++
++}
++
++int
++SimpleDriver::open(ThreadContext *tc, int mode, int flags)
++{
++    DPRINTF(Device_Driver,"opend %s\n",filename);
++
++    Process* process = tc->getProcessPtr();
++    auto device_fd_entry = std::make_shared<DeviceFDEntry>(this, filename);
++    int tgt_fd = process->fds->allocFD(device_fd_entry);
++    DPRINTF(Device_Driver,"fd =  %d\n",tgt_fd);
++    return tgt_fd;
++
++
++}
++
++Addr
++SimpleDriver::mmap(ThreadContext *tc, Addr start, uint64_t length,
++                    int prot, int tgt_flags, int tgt_fd, off_t offset)
++{
++    
++    Process * process = tc->getProcessPtr();
++    auto mem_state = process->memState;
++
++    //Addr pg_off = offset >> PAGE_SHIFT;
++    
++    
++    
++    start = mem_state->extendMmap(length);
++    process->pTable->map(start, deviceBaseAddr, length, false);
++
++    DPRINTF(Device_Driver,"mmap : start = %#x, length = %#x, offset = %#x, paddr = %#x\n",start,length,offset,deviceBaseAddr);
++
++
++    return start;
++
++
++
++}
++
++
++
++} //namespace gem5
++
+diff --git a/src/device/simple_driver.hh b/src/device/simple_driver.hh
+new file mode 100644
+index 0000000000..a7d986cb8e
+--- /dev/null
++++ b/src/device/simple_driver.hh
+@@ -0,0 +1,46 @@
++#ifndef __SIMPLE_DRIVER_HH__
++#define __SIMPLE_DRIVER_HH__
++
++#include <cassert>
++#include <cstdint>
++#include <set>
++#include <unordered_map>
++
++#include "params/SimpleDriver.hh"
++#include "base/addr_range_map.hh"
++#include "mem/request.hh"
++#include "sim/emul_driver.hh"
++#include "device/simple_deviceobj.hh"
++
++namespace gem5
++{
++
++#define PAGE_SHIFT 0xc
++
++
++//class SimpleDeviceObj;
++class SimpleDriver : public EmulatedDriver
++{
++    public:
++        SimpleDriver(const SimpleDriverParams &p);
++        int ioctl(ThreadContext *tc, unsigned req, Addr ioc_buf) override
++            {  panic("ioctl not implement!");   }
++        int open(ThreadContext *tc, int mode, int flags) override;
++        Addr mmap(ThreadContext *tc, Addr start, uint64_t length,
++              int prot, int tgt_flags, int tgt_fd, off_t offset) override;
++
++
++        Addr deviceBaseAddr;
++        //AddrRangeList deviceaddr;
++
++};
++
++
++
++
++
++} //namespace gem5
++
++
++
++#endif
+\ No newline at end of file
+diff --git a/src/mem/SConscript b/src/mem/SConscript
+index 70a5c43758..cf5b29c260 100644
+--- a/src/mem/SConscript
++++ b/src/mem/SConscript
+@@ -167,3 +167,7 @@ DebugFlag('TokenPort')
+ DebugFlag("MemChecker")
+ DebugFlag("MemCheckerMonitor")
+ DebugFlag("QOS")
++
++DebugFlag("Device")
++DebugFlag("Device_Mem")
++DebugFlag("Device_Tran")
+diff --git a/src/mem/cache/SConscript b/src/mem/cache/SConscript
+index dd8f2b145b..224c2ff30b 100644
+--- a/src/mem/cache/SConscript
++++ b/src/mem/cache/SConscript
+@@ -51,6 +51,8 @@ DebugFlag('HWPrefetch')
+ DebugFlag('MSHR')
+ DebugFlag('HWPrefetchQueue')
+ 
++DebugFlag('Device_Cache')
++
+ # CacheTags is so outrageously verbose, printing the cache's entire tag
+ # array on each timing access, that you should probably have to ask for
+ # it explicitly even above and beyond CacheAll.
+diff --git a/src/mem/cache/base.cc b/src/mem/cache/base.cc
+index e738167066..8be99e8d60 100644
+--- a/src/mem/cache/base.cc
++++ b/src/mem/cache/base.cc
+@@ -62,6 +62,7 @@
+ #include "params/BaseCache.hh"
+ #include "params/WriteAllocator.hh"
+ #include "sim/cur_tick.hh"
++#include "debug/Device_Cache.hh"
+ 
+ namespace gem5
+ {
+@@ -456,9 +457,10 @@ BaseCache::recvTimingReq(PacketPtr pkt)
+                     pkt->getAddr(), pkt->isSecure() ? "s" : "ns");
+             blk->clearPrefetched();
+         }
+-
++        DPRINTF(Device_Cache, "handleTimingReqHit %" PRIx64 " %s\n",pkt->getAddr(),pkt->isWrite()?"Write":"Read");
+         handleTimingReqHit(pkt, blk, request_time);
+     } else {
++        DPRINTF(Device_Cache, "handleTimingReqMiss %" PRIx64 " %s\n",pkt->getAddr(),pkt->isWrite()?"Write":"Read");
+         handleTimingReqMiss(pkt, blk, forward_time, request_time);
+ 
+         ppMiss->notify(CacheAccessProbeArg(pkt,accessor));
+@@ -477,6 +479,7 @@ BaseCache::recvTimingReq(PacketPtr pkt)
+ void
+ BaseCache::handleUncacheableWriteResp(PacketPtr pkt)
+ {
++    DPRINTF(Device_Cache, "handleUncacheableWriteResp %" PRIx64 " : %s\n",pkt->getAddr(),pkt->isWrite()?"Write":"Read");
+     Tick completion_time = clockEdge(responseLatency) +
+         pkt->headerDelay + pkt->payloadDelay;
+ 
+diff --git a/src/mem/coherent_xbar.cc b/src/mem/coherent_xbar.cc
+index 74ef1ead36..97dfc73bc7 100644
+--- a/src/mem/coherent_xbar.cc
++++ b/src/mem/coherent_xbar.cc
+@@ -51,7 +51,7 @@
+ #include "debug/AddrRanges.hh"
+ #include "debug/CoherentXBar.hh"
+ #include "sim/system.hh"
+-
++#include "debug/Device_Obj.hh"
+ namespace gem5
+ {
+ 
+@@ -148,6 +148,7 @@ CoherentXBar::init()
+ bool
+ CoherentXBar::recvTimingReq(PacketPtr pkt, PortID cpu_side_port_id)
+ {
++    //DPRINTF(Device_Obj,"CoherentXBar::recvTimingReq. pkt->addr=%#x, is %s, cpu_side_port_id = %d\n",pkt->getAddr(),pkt->isRead()?"Read":"Write",cpu_side_port_id);
+     // determine the source port based on the id
+     ResponsePort *src_port = cpuSidePorts[cpu_side_port_id];
+ 
+@@ -322,6 +323,7 @@ CoherentXBar::recvTimingReq(PacketPtr pkt, PortID cpu_side_port_id)
+         reqLayers[mem_side_port_id]->failedTiming(src_port,
+                                                 clockEdge(Cycles(1)));
+     } else {
++        //DPRINTF(Device_Obj,"Success. pkt->addr=%#x, is %s, cpu_side_port_id = %d\n",pkt->getAddr(),pkt->isRead()?"Read":"Write",cpu_side_port_id);
+         // express snoops currently bypass the crossbar state entirely
+         if (!is_express_snoop) {
+             // if this particular request will generate a snoop
+@@ -342,6 +344,7 @@ CoherentXBar::recvTimingReq(PacketPtr pkt, PortID cpu_side_port_id)
+             if (expect_response || expect_snoop_resp) {
+                 assert(routeTo.find(pkt->req) == routeTo.end());
+                 routeTo[pkt->req] = cpu_side_port_id;
++                //DPRINTF(Device_Obj,"need response and add to routeTo. pkt->addr=%#x, is %s, cpu_side_port_id = %d\n",pkt->getAddr(),pkt->isRead()?"Read":"Write",cpu_side_port_id);
+ 
+                 panic_if(routeTo.size() > maxRoutingTableSizeCheck,
+                          "%s: Routing table exceeds %d packets\n",
+@@ -410,7 +413,7 @@ CoherentXBar::recvTimingReq(PacketPtr pkt, PortID cpu_side_port_id)
+             if (!pkt->isWrite()) {
+                 assert(routeTo.find(pkt->req) == routeTo.end());
+                 routeTo[pkt->req] = cpu_side_port_id;
+-
++                //DPRINTF(Device_Obj,"need response and add to routeTo. 2 pkt->addr=%#x, is %s, cpu_side_port_id = %d\n",pkt->getAddr(),pkt->isRead()?"Read":"Write",cpu_side_port_id);
+                 panic_if(routeTo.size() > maxRoutingTableSizeCheck,
+                          "%s: Routing table exceeds %d packets\n",
+                          name(), maxRoutingTableSizeCheck);
+@@ -446,6 +449,12 @@ CoherentXBar::recvTimingReq(PacketPtr pkt, PortID cpu_side_port_id)
+ bool
+ CoherentXBar::recvTimingResp(PacketPtr pkt, PortID mem_side_port_id)
+ {
++    if(mem_side_port_id == 0){
++        Addr addr = pkt->getAddr();
++        //DPRINTF(Device_Obj,"addr = %#x, is %s",addr\
++        ,pkt->isRead()?"Read":"Write");
++    }
++    
+     // determine the source port based on the id
+     RequestPort *src_port = memSidePorts[mem_side_port_id];
+ 
+diff --git a/src/mem/mem_ctrl.cc b/src/mem/mem_ctrl.cc
+index 97c7741abd..0554a7517c 100644
+--- a/src/mem/mem_ctrl.cc
++++ b/src/mem/mem_ctrl.cc
+@@ -50,7 +50,7 @@
+ #include "mem/mem_interface.hh"
+ #include "mem/nvm_interface.hh"
+ #include "sim/system.hh"
+-
++#include "debug/Device_Obj.hh"
+ namespace gem5
+ {
+ 
+@@ -102,6 +102,7 @@ MemCtrl::init()
+    if (!port.isConnected()) {
+         fatal("MemCtrl %s is unconnected!\n", name());
+     } else {
++        //DPRINTF(Device_Obj,"mem_ctrl:SendsendRangeChange\n");
+         port.sendRangeChange();
+     }
+ }
+diff --git a/src/mem/noncoherent_xbar.cc b/src/mem/noncoherent_xbar.cc
+index 12b62974b7..0e822fbde6 100644
+--- a/src/mem/noncoherent_xbar.cc
++++ b/src/mem/noncoherent_xbar.cc
+@@ -49,7 +49,7 @@
+ #include "base/trace.hh"
+ #include "debug/NoncoherentXBar.hh"
+ #include "debug/XBar.hh"
+-
++#include "debug/Device_Obj.hh"
+ namespace gem5
+ {
+ 
+@@ -164,6 +164,8 @@ NoncoherentXBar::recvTimingReq(PacketPtr pkt, PortID cpu_side_port_id)
+     if (expect_response) {
+         assert(routeTo.find(pkt->req) == routeTo.end());
+         routeTo[pkt->req] = cpu_side_port_id;
++        //DPRINTF(Device_Obj,"need response and add to routeTo. pkt->addr=%#x\
++        , is %s, cpu_side_port_id = %d\n",pkt->getAddr(),pkt->isRead()?"Read":"Write",cpu_side_port_id);
+     }
+ 
+     reqLayers[mem_side_port_id]->succeededTiming(packetFinishTime);
+diff --git a/src/mem/page_table.cc b/src/mem/page_table.cc
+index d715e0771f..71d6877e39 100644
+--- a/src/mem/page_table.cc
++++ b/src/mem/page_table.cc
+@@ -41,6 +41,9 @@
+ #include "sim/faults.hh"
+ #include "sim/serialize.hh"
+ 
++#include "debug/Device.hh"
++#include "debug/Device_Tran.hh"
++
+ namespace gem5
+ {
+ 
+@@ -132,23 +135,30 @@ EmulationPageTable::isUnmapped(Addr vaddr, int64_t size)
+ const EmulationPageTable::Entry *
+ EmulationPageTable::lookup(Addr vaddr)
+ {
++    DPRINTF(Device_Tran,"in 3tran1\n");
+     Addr page_addr = pageAlign(vaddr);
++    DPRINTF(Device_Tran,"in 3tran2\n");
+     PTableItr iter = pTable.find(page_addr);
++    DPRINTF(Device_Tran,"in 3tran3\n");
+     if (iter == pTable.end())
+         return nullptr;
++    DPRINTF(Device_Tran,"in 3tran4\n");
+     return &(iter->second);
+ }
+ 
+ bool
+ EmulationPageTable::translate(Addr vaddr, Addr &paddr)
+ {
++    DPRINTF(Device_Tran,"in 2tran1\n");
+     const Entry *entry = lookup(vaddr);
+     if (!entry) {
+         DPRINTF(MMU, "Couldn't Translate: %#x\n", vaddr);
+         return false;
+     }
++    DPRINTF(Device_Tran,"in 2tran2\n");
+     paddr = pageOffset(vaddr) + entry->paddr;
+     DPRINTF(MMU, "Translating: %#x->%#x\n", vaddr, paddr);
++    DPRINTF(Device_Tran,"in 2tran3\n");
+     return true;
+ }
+ 
+@@ -156,15 +166,23 @@ Fault
+ EmulationPageTable::translate(const RequestPtr &req)
+ {
+     Addr paddr;
++    DPRINTF(Device_Tran,"in tran\n");
+     assert(pageAlign(req->getVaddr() + req->getSize() - 1) ==
+            pageAlign(req->getVaddr()));
++    DPRINTF(Device_Tran,"in tran2\n");
+     if (!translate(req->getVaddr(), paddr))
+         return Fault(new GenericPageTableFault(req->getVaddr()));
++    DPRINTF(Device_Tran,"in tran3\n");
+     req->setPaddr(paddr);
++    DPRINTF(Device_Tran,"in tran4\n");
+     if ((paddr & (_pageSize - 1)) + req->getSize() > _pageSize) {
+         panic("Request spans page boundaries!\n");
+         return NoFault;
+     }
++
++    DPRINTF(Device_Tran,"out tran\n");
++    DPRINTF(Device, "translate addr Vaddr: %" PRIx64 " Paddr: %" PRIx64 "\n",req->getVaddr(),req->getPaddr());
++
+     return NoFault;
+ }
+ 
+diff --git a/src/mem/port.hh b/src/mem/port.hh
+index 5f977aaab8..d4f97ee7bb 100644
+--- a/src/mem/port.hh
++++ b/src/mem/port.hh
+@@ -52,12 +52,17 @@
+ #include <string>
+ 
+ #include "base/addr_range.hh"
++#include "base/trace.hh"
+ #include "mem/packet.hh"
+ #include "mem/protocol/atomic.hh"
+ #include "mem/protocol/functional.hh"
+ #include "mem/protocol/timing.hh"
+ #include "sim/port.hh"
+ 
++#include "sim/faults.hh"
++#include "sim/serialize.hh"
++#include "debug/Device_Mem.hh"
++
+ namespace gem5
+ {
+ 
+@@ -602,6 +607,8 @@ RequestPort::sendMemBackdoorReq(const MemBackdoorReq &req,
+ inline bool
+ RequestPort::sendTimingReq(PacketPtr pkt)
+ {
++    //DPRINTF(MMU, "Allocating Page: %#x-%#x\n", vaddr, vaddr + size);
++    DPRINTF(Device_Mem, "sendTimingReq addr: %" PRIx64 " \n",pkt->getAddr());
+     try {
+         addTrace(pkt);
+         bool succ = TimingRequestProtocol::sendReq(_responsePort, pkt);
+diff --git a/src/mem/protocol/timing.cc b/src/mem/protocol/timing.cc
+index 802dec9deb..26f391cdf5 100644
+--- a/src/mem/protocol/timing.cc
++++ b/src/mem/protocol/timing.cc
+@@ -39,7 +39,8 @@
+  */
+ 
+ #include "mem/protocol/timing.hh"
+-
++#include "base/trace.hh"
++#include "debug/Device_Obj.hh"
+ namespace gem5
+ {
+ 
+@@ -79,7 +80,12 @@ TimingRequestProtocol::sendRetryResp(TimingResponseProtocol *peer)
+ bool
+ TimingResponseProtocol::sendResp(TimingRequestProtocol *peer, PacketPtr pkt)
+ {
++     //uint8_t* data1 = pkt->getPtr<uint8_t>();
++    //DPRINTF(Device_Obj, "Got response for addr %" PRIx64 ", is %s,is %s\n", pkt->getAddr(), pkt->isRead()?"Read":"Write",pkt->isResponse()?" Response":"not Response");
+     assert(pkt->isResponse());
++
++   
++
+     return peer->recvTimingResp(pkt);
+ }
+ 
+diff --git a/src/mem/xbar.cc b/src/mem/xbar.cc
+index 0d4b2fca97..ae7cb088f9 100644
+--- a/src/mem/xbar.cc
++++ b/src/mem/xbar.cc
+@@ -53,6 +53,7 @@
+ #include "debug/AddrRanges.hh"
+ #include "debug/Drain.hh"
+ #include "debug/XBar.hh"
++#include "debug/Device_Obj.hh"
+ 
+ namespace gem5
+ {
+@@ -378,8 +379,16 @@ BaseXBar::recvRangeChange(PortID mem_side_port_id)
+ 
+     // remember that we got a range from this memory-side port and thus the
+     // connected CPU-side-port module
++    //DPRINTF(Device_Obj,"BaseXBar:recvRangeChange,mem_side_port_id=%d\n",mem_side_port_id);
++
+     gotAddrRanges[mem_side_port_id] = true;
+ 
++    for(int i = 0;i<gotAddrRanges.size();i++)
++    {
++        //DPRINTF(Device_Obj,"gotAddrRanges[%d]=%s\n",i,gotAddrRanges[i]?"True":"False");
++    }
++
++    //DPRINTF(Device_Obj,"recvRangeChange:gotAllAddrRanges=%s\n",gotAllAddrRanges?"True":"False");
+     // update the global flag
+     if (!gotAllAddrRanges) {
+         // take a logical AND of all the ports and see if we got
+@@ -387,6 +396,10 @@ BaseXBar::recvRangeChange(PortID mem_side_port_id)
+         gotAllAddrRanges = true;
+         std::vector<bool>::const_iterator r = gotAddrRanges.begin();
+         while (gotAllAddrRanges &&  r != gotAddrRanges.end()) {
++            /*Device_CSX*/            
++            //DPRINTF(Device_Obj,"getRanges r=%s\n",*r?"True":"False");
++
++            
+             gotAllAddrRanges &= *r++;
+         }
+         if (gotAllAddrRanges)
+diff --git a/test_device/Makefile b/test_device/Makefile
+new file mode 100644
+index 0000000000..5b41c3615b
+--- /dev/null
++++ b/test_device/Makefile
+@@ -0,0 +1,5 @@
++
++
++all:
++	/home/csx/sw/riscv/rv64g-linux-gnu/bin/riscv64-unknown-linux-gnu-gcc -c -o test7.o test7.c
++	/home/csx/sw/riscv/rv64g-linux-gnu/bin/riscv64-unknown-linux-gnu-gcc -static -o test7 test7.o
+\ No newline at end of file
+diff --git a/test_device/test1.s b/test_device/test1.s
+new file mode 100644
+index 0000000000..64d6732f22
+--- /dev/null
++++ b/test_device/test1.s
+@@ -0,0 +1,15 @@
++.section .text
++.globl _start
++
++_start:
++    li a0, 1          # 将值 1 存储到 a0 寄存器
++    la a1, target     # 将目标地址加载到 a1 寄存器
++    sw a0, 0(a1)      # 存储 a0 寄存器的值到目标地址
++    
++    li a7, 93         # 设置系统调用号为 93（退出程序）
++    ecall             # 执行系统调用
++
++.section .data
++.align 2
++target:
++    .space 4          # 分配 4 个字节的空间，用于存储数据
+diff --git a/test_device/test2.s b/test_device/test2.s
+new file mode 100644
+index 0000000000..6aff0a7df8
+--- /dev/null
++++ b/test_device/test2.s
+@@ -0,0 +1,39 @@
++.section .text
++.globl _start
++
++_start:
++    # 设置绝对物理地址（假设为 0x80000000）
++    lui a1, %hi(0x390)   # 将常数的高 20 位加载到 t0 寄存器
++    addi a1, a1, %lo(0x390)  # 将常数的低 12 位加载到 t0 寄存器
++    li a0, 1          # 将值 1 存储到 a0 寄存器
++    sw a0, 0x0(a1)
++    sw a0, 0x10(a1)
++    sw a0, 0x20(a1)
++    sw a0, 0x30(a1)
++    sw a0, 0x40(a1)
++    sw a0, 0x50(a1)
++    sw a0, 0x60(a1)
++    sw a0, 0x70(a1)
++    sw a0, 0x80(a1)
++    sw a0, 0x90(a1)
++    sw a0, 0xa0(a1)
++    sw a0, 0xb0(a1)
++    lw a0, 0x0(a1)
++    lw a0, 0x10(a1)
++    lw a0, 0x20(a1)
++    lw a0, 0x30(a1)
++    lw a0, 0x40(a1)
++    lw a0, 0x50(a1)
++    lw a0, 0x60(a1)
++    lw a0, 0x70(a1)
++    lw a0, 0x80(a1)
++    lw a0, 0x90(a1)
++    lw a0, 0xa0(a1)
++    lw a0, 0xb0(a1)
++    #sw a0, 0(a1)      # 存储 a0 寄存器的值到绝对物理地址
++
++    li a7, 93         # 设置系统调用号为 93（退出程序）
++    ecall             # 执行系统调用
++
++.section .data
++    # 不再需要 target，因为直接访问绝对物理地址
+\ No newline at end of file
+diff --git a/test_device/test3.s b/test_device/test3.s
+new file mode 100644
+index 0000000000..b85b3ac8c7
+--- /dev/null
++++ b/test_device/test3.s
+@@ -0,0 +1,52 @@
++.section .text
++.globl _start
++
++_start:
++    lui a1, %hi(0x400)   
++    addi a1, a1, %lo(0x400)  
++    li a0, 0
++    sw a0, 0x10(a1)
++    li a0, 10           #addA = 10
++    sw a0, 0x4(a1)
++    li a0, 25           #addB = 25
++    sw a0, 0x8(a1)
++    li a0, 0xbb
++    sw a0, 0x0(a1)
++
++    loop:
++        lw a0, 0x10(a1)
++        addi t0, x0,0xaa
++        addi a2, x0,0x000000ff
++        and a0, a2, a0
++        bne a0, t0, loop
++
++
++    lw t1, 0xc(a1)
++
++
++    li a0, 0
++    sw a0, 0x10(a1)
++    li a0, 9            #addA = 9
++    sw a0, 0x4(a1)
++    li a0, 17           #addB = 17     
++    sw a0, 0x8(a1)
++    li a0, 0xbb
++    sw a0, 0x00(a1)
++
++    loop2:
++        lw a0, 0x10(a1)
++        addi t0, x0,0xaa
++        addi a2, x0,0x000000ff
++        and a0, a2, a0
++        bne a0, t0, loop2
++
++    lw t1, 0xc(a1)
++
++
++
++
++    li a7, 93         # 设置系统调用号为 93 退出程序
++    ecall             # 执行系统调用
++
++.section .data
++    
+\ No newline at end of file
+diff --git a/test_device/test4.c b/test_device/test4.c
+new file mode 100644
+index 0000000000..975386710e
+--- /dev/null
++++ b/test_device/test4.c
+@@ -0,0 +1,57 @@
++#include <stdio.h>
++static int data[500]; //.bss
++/*
++    [号] 名称              类型             地址              偏移量
++       大小              全体大小          旗标   链接   信息   对齐
++    [20] .bss              NOBITS           000000000008d3b8  0007c3b8
++       00000000000054b0  0000000000000000  WA       0     0     8
++*/
++int main(int argc, char* argv[])
++{
++    printf("Hello world!\n");
++    //data[2] = 1;
++    // printf("%x\n",data);
++    // // for(int i = 0 ;i < 50 ;i++){
++    // //     printf("%x\n",data+i);
++    // // }
++    // printf("%x\n",data+499);
++    
++    int *enable,*inA,*inB,*out,*ok;
++    enable  = (int*)0x800400;
++    inA     = (int*)0x800404;
++    inB     = (int*)0x800408;
++    out     = (int*)0x80040c;
++    ok      = (int*)0x800410;
++    *out = (int)0;
++    *ok  = (int)0;
++    *inA = (int)5;
++    *inB = (int)6;
++    *enable = (int)0xbb;
++    int _ok;
++    int _out;
++    //_out = *inA;
++    while(1){
++        _ok = *ok;
++        _ok = _ok & (0x00 | 0xff);
++            //*inA = (int)5;
++            //*inB = (int)6;
++            //if(*inB == 5){;}
++            //if(*inA == 6){;}
++        //printf("ok = %x\n",*ok);
++        //_out = *out;
++        if(_ok == 0xaa) break;
++    }
++    
++    _out = *out;
++    //printf("%x\n",&_ok);
++    printf("_out = %x(10)\n",_out);
++    //_out = _out & (0x00 | 0xff);
++    printf("out = %d(10)\n",(*out)&(0xff|0x00));
++
++
++    //printf()
++
++
++
++    return 0;
++}
+diff --git a/test_device/test5.c b/test_device/test5.c
+new file mode 100644
+index 0000000000..132602d040
+--- /dev/null
++++ b/test_device/test5.c
+@@ -0,0 +1,27 @@
++#include <stdio.h>
++static int data1[500000]; //.bss
++
++int main(int argc, char* argv[])
++{
++    printf("hi\n");
++    
++    //printf("\n\n\n\n\ndata1 : %x ---- %x\n\n\n\n\n",data1,data1+499999);
++    //data1[499999] = 166;
++    //int t = 1;
++    //while(t--){
++    //    int a = data1[499999];
++    //}
++    // int *add = (int*)0x8003f0;
++    // t = 100;
++    // *add = 177;
++    // while(t--){
++    //     int b = *add;
++    // }
++    int* data = (int*)0x100000;
++    printf("%x\n",*data);
++
++
++
++
++    return 0;
++}
+diff --git a/test_device/test6.c b/test_device/test6.c
+new file mode 100644
+index 0000000000..6d741bb32c
+--- /dev/null
++++ b/test_device/test6.c
+@@ -0,0 +1,37 @@
++#include <stdio.h>
++static int data[500]; //.bss
++/*
++    [号] 名称              类型             地址              偏移量
++       大小              全体大小          旗标   链接   信息   对齐
++    [20] .bss              NOBITS           000000000008d3b8  0007c3b8
++       00000000000054b0  0000000000000000  WA       0     0     8
++*/
++int main(int argc, char* argv[])
++{
++    printf("Hello world!\n");
++
++
++    int *enb = (int *)0x8000400;
++    int *inA = (int *)0x8000404;
++    int *inB = (int *)0x8000408;
++    int *out = (int *)0x800040c;
++    int *ok  = (int *)0x8000410;
++    *inA = 5;
++    *inB = 10;
++    *enb = 0xbb;
++    int _ok;
++    int _out;
++    while(1){
++         _ok = *ok;
++        _ok = _ok & (0x00 | 0xff);
++        if(_ok == 0xaa) break;
++    }
++    _out = *out;
++    _out = _out & (0x00 | 0xff);
++    printf("\n-----out = %d ----------\n",_out);
++    
++    printf("start=%x--------end=%x\n",data,data+499);
++
++
++    return 0;
++}
+diff --git a/test_device/test7.c b/test_device/test7.c
+new file mode 100644
+index 0000000000..e09e46c7ee
+--- /dev/null
++++ b/test_device/test7.c
+@@ -0,0 +1,41 @@
++#include <stdio.h>
++#include <sys/mman.h>
++#include <fcntl.h>
++#include <unistd.h>
++int main(int argc, char* argv[])
++{
++    int fd = open("/dev/simdev", O_RDWR);
++
++    printf("fd = %d\n",fd);
++ 
++    void *dataptr = mmap(NULL,0x2000,PROT_EXEC,MAP_SHARED,fd,0);
++
++    printf("dataptr = %p\n",dataptr);
++    
++    int *data_e = dataptr;
++    int *data_a = dataptr + 4;
++    int *data_b = dataptr + 8;
++    int *data_out = dataptr + 12;
++    int *data_ok = dataptr + 16;
++
++    *data_a = 5;
++    *data_b = 10;
++    *data_e = 0xbb;
++    int _ok;
++    int _out;
++    _ok = *data_ok;
++    while(1){
++        _ok = *data_ok;
++        _ok = _ok & (0x00 | 0xff);
++        if(_ok == 0xaa)break;
++    }
++    _out = *data_out;
++    _out = _out & (0x00 | 0xff);
++    printf("\n-----------------\nout = %d\n-----------------\n",_out);
++    printf("Hello world!\n");
++
++
++
++
++    return 0;
++}

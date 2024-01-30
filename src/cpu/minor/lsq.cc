@@ -1302,13 +1302,9 @@ LSQ::recvTimingResp(PacketPtr response)
         safe_cast<LSQRequestPtr>(response->popSenderState());
 
     if(response->isRead()){
-        DPRINTF(Device_CPU, "This ReadResponse pkt: addr= %" PRIx64 " ,data= %d\n", response->getAddr(), *(response->getPtr<uint8_t>()));
     }
 
-    // DPRINTF(Device_CPU, "Received response packet inst: %s"
-    //     " addr: 0x%x cmd: %s\n",
-    //     *(request->inst), response->getAddr(),
-    //     response->cmd.toString());
+
 
     DPRINTF(MinorMem, "Received response packet inst: %s"
         " addr: 0x%x cmd: %s\n",
