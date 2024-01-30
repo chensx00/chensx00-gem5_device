@@ -2,7 +2,7 @@
 #include "base/trace.hh"
 #include "debug/Device_Obj.hh"
 #include "base/flags.hh"
-#include "debug/Device_Obj_begin.hh"
+
 
 
 namespace gem5

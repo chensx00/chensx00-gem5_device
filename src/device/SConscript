@@ -8,6 +8,6 @@ Source('simple_deviceobj.cc')
 Source('simple_driver.cc')
 
 DebugFlag('Device_Obj', "Print out Device_Obj debug messages")
-DebugFlag('Device_Obj_begin')
+
 
 DebugFlag('Device_Driver')
