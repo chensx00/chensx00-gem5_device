@@ -69,6 +69,9 @@ class TLB : public BaseTLB
 
     Walker *walker;
 
+    //device addr mask
+    Addr deviceMask = 0x8000400;
+
     struct TlbStats : public statistics::Group
     {
         TlbStats(statistics::Group *parent);

@@ -10,13 +10,15 @@
 
 #define addressNum 5
 
+
 namespace gem5
 {
-    /*0x400 : enable signal: 0xbb is true
-      0x404 : inA
-      0x408 : inB
-      0x40c : out
-      0x410 : over signal: 0xaa is true
+    /*device register*/
+    /*[0]0x00 : enable signal: 0xbb is true
+      [1]0x04 : inA
+      [2]0x08 : inB
+      [3]0x0c : out
+      [4]0x10 : over signal: 0xaa is true
     */
 class SimpleDeviceObj : public TickedObject
 {
@@ -25,56 +27,41 @@ class SimpleDeviceObj : public TickedObject
 
     private:
     //deprecated, since the same address cannot belong to two different ReadesponsePort
-        class EnablePort : public ResponsePort
-        {
-            private:
-                SimpleDeviceObj *owner;
-                PacketPtr ptk;
-                bool needRetry;
-            public:
-                EnablePort(const std::string& name, SimpleDeviceObj *owner ) :
-                    ResponsePort(name), owner(owner), ptk(nullptr)
-                { }
 
-                AddrRangeList getAddrRanges() const override;
-            
-            protected:
-
-                Tick recvAtomic(PacketPtr pkt) override
-                    { panic("recvAtomic unimpl."); }
-                void recvFunctional(PacketPtr pkt) override
-                    { panic("recvFunctional unimpl."); }
-                void recvRespRetry() override
-                    { panic("recvFunctional unimpl."); }
-                bool recvTimingReq(PacketPtr pkt) override
-                    { panic("recvFunctional unimpl."); }
-
-
-        };
-
-
-        class DataPort : public RequestPort
-        {
+        class DevicePort : public ResponsePort{
             private:
                 SimpleDeviceObj *owner;
                 PacketPtr blockedPacket;
-            
+
             public:
-                DataPort(const std::string& name, SimpleDeviceObj *owner) :
-                    RequestPort(name), owner(owner), blockedPacket(nullptr)
-                {  }
+                DevicePort(const std::string& _name, SimpleDeviceObj *_owner) :
+                    ResponsePort(_name),owner(_owner),blockedPacket(nullptr)
+                { }
 
                 void sendPacket(PacketPtr pkt);
-            
+
+                AddrRangeList getAddrRanges() const override;
+
+                void trySendRetry();
+
             protected:
-                bool recvTimingResp(PacketPtr pkt) override;
-                void recvReqRetry() override;
-                void recvRangeChange() override;
+                Tick recvAtomic(PacketPtr pkt) override{
+                    panic("recvAtomic unimpl. please use MinorCPU!\n");
+                }
 
-        };     
+                void recvFunctional(PacketPtr pkt) override {
+                    panic("recvFunctional unimpl.\n");  
+                }
 
-        EnablePort enablePort;
-        DataPort dataPort;
+                bool recvTimingReq(PacketPtr pkt) override ;
+
+                void recvRespRetry() override ;
+   
+        };
+
+
+
+        DevicePort devicePort;
 
         bool blocked;
 
@@ -84,11 +71,11 @@ class SimpleDeviceObj : public TickedObject
 
         void endRTLModel();
 
-        bool handleResponse(PacketPtr pkt);
+        bool handleRequest(PacketPtr pkt);
 
-        bool handleData(Addr addr, uint8_t data);
+        void sendResponse();
 
-        void MakePacketAndTrytoSend(int index, MemCmd cmd);                
+        void ResetDeviceReg();                
 
         bool WrSetData();
 
@@ -104,22 +91,26 @@ class SimpleDeviceObj : public TickedObject
 
         uint16_t requestorID;
 
-        int RequestCnt;
+        int requestCnt;
 
         enum DeviceStatus {
             IDEL,   //waiting enable signal
-            GetA,   //requiring dataA
-            GetB,   //requiring dataB
-            RTLRun,
-            SetOut, //output result
-            ReSet,  //reset RTLmodel and reset enable signal
-            SetOK,  //set complete signal
-            Waiting //Waiting for changing to next status
+            RTLRun, //input data to RTL model to run
+            Waiting,   //waiting for RTL model
+            SetOK  //set complete signal
 
         };
 
-        DeviceStatus Status;
-        DeviceStatus LastStatus;
+        DeviceStatus status;
+    
+
+        uint8_t deviceReg[addressNum];
+
+        EventFunctionWrapper event;
+
+        PacketPtr readyToRespPkt;
+        //specify the device register address
+        std::vector<Addr> AddrList; 
 
     public:
 
@@ -131,14 +122,14 @@ class SimpleDeviceObj : public TickedObject
 
         Port &getPort(const std::string &if_name, PortID idx=InvalidPortID) override;
 
+        //pointer of RTL wrapper
         Wrapper_SimDev *wr;
 
-        AddrRangeList deviceaddr;
+        //Device's address space
+        AddrRangeList deviceAddr;
 
-        std::vector<Addr> AddrList;
-
-        //static constexpr Addr AddrList[addressNum] = {0x400,0x404,0x408,0x40c,0x410};
-
+        
+        
 };
 
 
