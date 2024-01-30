@@ -43,7 +43,6 @@
 #include "mem/request.hh"
 #include "params/PMAChecker.hh"
 #include "sim/sim_object.hh"
-#include "debug/Device.hh"
 namespace gem5
 {
 

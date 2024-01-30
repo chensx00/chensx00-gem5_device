@@ -41,8 +41,7 @@
 #include "sim/faults.hh"
 #include "sim/serialize.hh"
 
-#include "debug/Device.hh"
-#include "debug/Device_Tran.hh"
+
 
 namespace gem5
 {

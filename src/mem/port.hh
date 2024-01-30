@@ -61,7 +61,7 @@
 
 #include "sim/faults.hh"
 #include "sim/serialize.hh"
-#include "debug/Device_Mem.hh"
+
 
 namespace gem5
 {

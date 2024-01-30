@@ -51,7 +51,7 @@
 #include "debug/AddrRanges.hh"
 #include "debug/CoherentXBar.hh"
 #include "sim/system.hh"
-#include "debug/Device_Obj.hh"
+
 namespace gem5
 {
 

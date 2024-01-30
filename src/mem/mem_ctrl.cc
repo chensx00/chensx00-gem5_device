@@ -50,7 +50,7 @@
 #include "mem/mem_interface.hh"
 #include "mem/nvm_interface.hh"
 #include "sim/system.hh"
-#include "debug/Device_Obj.hh"
+
 namespace gem5
 {
 

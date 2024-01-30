@@ -49,7 +49,7 @@
 #include "base/trace.hh"
 #include "debug/NoncoherentXBar.hh"
 #include "debug/XBar.hh"
-#include "debug/Device_Obj.hh"
+
 namespace gem5
 {
 

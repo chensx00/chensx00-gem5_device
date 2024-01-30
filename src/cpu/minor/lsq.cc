@@ -50,7 +50,7 @@
 #include "debug/Activity.hh"
 #include "debug/MinorMem.hh"
 
-#include "debug/Device_CPU.hh"
+
 
 namespace gem5
 {

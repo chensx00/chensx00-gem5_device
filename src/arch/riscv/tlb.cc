@@ -53,10 +53,7 @@
 #include "sim/full_system.hh"
 #include "sim/process.hh"
 #include "sim/system.hh"
-#include "debug/Device.hh"
-#include "debug/Device_Tran.hh"
-#include "debug/Device_CPU.hh"
-#include "debug/Device_Obj.hh"
+
 namespace gem5
 {
 
