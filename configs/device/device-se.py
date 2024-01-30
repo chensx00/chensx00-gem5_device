@@ -302,16 +302,18 @@ system.workload = SEWorkload.init_compatible(mp0_path)
 
 #simple device
 if args.device:
-    device_base_addr = args.device_base_addr;
-    device_voltage = args.device_voltage;
-    device_clock = args.device_clock;
+    device_base_addr = args.device_base_addr
+    device_voltage = args.device_voltage
+    device_clock = args.device_clock
     device_clk_domain = SrcClockDomain()
-    device_clk_domain.clock = "100MHz"
-    device_clk_domain.voltage_domain = VoltageDomain()
+    device_clk_domain.clock = args.device_clock
+    device_clk_domain.voltage_domain = VoltageDomain(
+        voltage=args.device_voltage,
+    )
 
     device_base_range = AddrRange(
         device_base_addr,
-        size=0x1000,
+        size=args.device_mem_size,
     )
     
 

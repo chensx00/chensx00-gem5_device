@@ -788,6 +788,14 @@ def addSEOptions(parser):
     )
 
     parser.add_argument(
+        "--device-mem-size",
+        action="store",
+        type=str,
+        default="0x1000",
+        help="Memory size of the device"
+    )
+
+    parser.add_argument(
         "--device-voltage",
         action="store",
         type=str,
@@ -802,6 +810,8 @@ def addSEOptions(parser):
         default="100MHz",
         help="The clock of the device",
     )
+
+
 
 
 
