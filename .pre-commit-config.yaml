@@ -96,12 +96,6 @@ repos:
             exclude: .*
             language: system
             description: The gem5 style checker hook.
-          - id: gem5-commit-msg-checker
-            name: gem5 commit msg checker
-            entry: ext/git-commit-msg
-            language: system
-            stages: [commit-msg]
-            description: The gem5 commit message checker hook.
           - id: gerrit-commit-msg-job
             name: gerrit commit message job
             entry: util/gerrit-commit-msg-hook

@@ -1,0 +1,14 @@
+# -*- mode:python -*-
+
+# Copyright (C) 2024 Microprocessor R&D Center (MPRC), Peking University
+# All rights reserved.
+
+Import('*')
+
+SimObject('MMIODriver.py', sim_objects=['EmulatedMMIODriver'])
+Source('mmio_driver.cc')
+
+SimObject('SampleDevice.py', sim_objects=['SampleCounter'])
+Source('sample_counter.cc')
+
+DebugFlag('ComoIO')
